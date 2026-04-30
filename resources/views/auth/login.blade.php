@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -32,11 +33,9 @@
             content: "";
             position: fixed;
             inset: 0;
-            background: radial-gradient(
-                ellipse at center,
-                rgba(255,255,255,0) 55%,
-                rgba(238,246,240,0.9) 100%
-            );
+            background: radial-gradient(ellipse at center,
+                    rgba(255, 255, 255, 0) 55%,
+                    rgba(238, 246, 240, 0.9) 100%);
             pointer-events: none;
             z-index: 0;
         }
@@ -82,8 +81,15 @@
         }
 
         @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-30px) rotate(180deg); }
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-30px) rotate(180deg);
+            }
         }
 
         .login-container {
@@ -100,8 +106,15 @@
         }
 
         @keyframes slideUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .logo-container {
@@ -264,6 +277,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="bg-shapes">
         <div class="shape"></div>
@@ -285,20 +299,10 @@
                 <label for="phone">Phone Number</label>
                 <div class="input-wrapper {{ $errors->has('phone') ? 'error' : '' }}">
                     <i class="input-icon bi bi-telephone-fill"></i>
-                    <input 
-                        type="text" 
-                        id="phone" 
-                        name="phone" 
-                        value="{{ old('phone') }}" 
-                        placeholder="Enter 10-digit number"
-                        required
-                        autofocus
-                        pattern="[0-9]{10}"
-                        minlength="10"
-                        maxlength="10"
-                        oninput="this.value = this.value.replace(/[^0-9]/g, '');"
-                        title="Exactly 10 digits required"
-                    >
+                    <input type="text" id="phone" name="phone" value="{{ old('phone') }}"
+                        placeholder="Enter 10-digit number" required autofocus pattern="[0-9]{10}" minlength="10"
+                        maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                        title="Exactly 10 digits required">
                 </div>
                 @error('phone')
                     <div class="error-message">{{ $message }}</div>
@@ -309,15 +313,8 @@
                 <label for="password">Password</label>
                 <div class="input-wrapper {{ $errors->has('password') ? 'error' : '' }}">
                     <i class="input-icon bi bi-lock-fill"></i>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        name="password" 
-                        placeholder="5-8 characters"
-                        required
-                        minlength="5"
-                        maxlength="8"
-                    >
+                    <input type="password" id="password" name="password" placeholder="" required minlength="5"
+                        maxlength="12">
                     <i class="toggle-password bi bi-eye" id="togglePassword"></i>
                 </div>
                 <a href="{{ route('forgotPassword') }}" class="forgot-link">Forgot Password?</a>
@@ -338,7 +335,7 @@
 
     <script>
         // Double-enforce numeric input for better mobile experience
-        document.getElementById('phone')?.addEventListener('keypress', function(e) {
+        document.getElementById('phone')?.addEventListener('keypress', function (e) {
             if (e.which < 48 || e.which > 57) e.preventDefault();
         });
 
@@ -347,10 +344,10 @@
         const passwordInput = document.getElementById('password');
 
         if (togglePassword && passwordInput) {
-            togglePassword.addEventListener('click', function() {
+            togglePassword.addEventListener('click', function () {
                 const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
                 passwordInput.setAttribute('type', type);
-                
+
                 // Toggle icon
                 this.classList.toggle('bi-eye');
                 this.classList.toggle('bi-eye-slash');
@@ -358,4 +355,5 @@
         }
     </script>
 </body>
+
 </html>
