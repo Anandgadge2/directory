@@ -25,6 +25,7 @@ class PatrolController extends Controller
             $base = DB::table('patrol_sessions')
                 ->join('users', 'patrol_sessions.user_id', '=', 'users.id')
                 ->leftJoin('site_details', 'patrol_sessions.site_id', '=', 'site_details.id')
+                ->leftJoin('client_details', 'site_details.client_id', '=', 'client_details.id')
                 ->where('patrol_sessions.company_id', $companyId)
                 ->whereIn('patrol_sessions.user_id', $accessibleUserIds) // ✅ Role-based filter
                 ->whereIn('patrol_sessions.session', ['Foot', 'Vehicle']);
@@ -54,7 +55,7 @@ class PatrolController extends Controller
                 ->select(
                     'users.id as user_id',
                     'users.name as user_name',
-                    'site_details.client_name as range',
+                    'client_details.name as range',
                     'site_details.name as beat',
                     'patrol_sessions.started_at',
                     'patrol_sessions.ended_at',
@@ -87,9 +88,9 @@ class PatrolController extends Controller
             $rangeStats = (clone $base)
                 ->whereNotNull('site_details.client_name')
                 ->whereNotNull('patrol_sessions.ended_at')
-                ->groupBy('site_details.client_name')
+                ->groupBy('client_details.id', 'client_details.name')
                 ->selectRaw('
-                    site_details.client_name as range_name,
+                    client_details.name as range_name,
                     ROUND(SUM(COALESCE(patrol_sessions.distance,0))/1000, 2) as distance
                 ')
                 ->having('distance', '>', 0)
@@ -188,6 +189,7 @@ class PatrolController extends Controller
             $base = DB::table('patrol_sessions')
                 ->join('users', 'users.id', '=', 'patrol_sessions.user_id')
                 ->leftJoin('site_details', 'site_details.id', '=', 'patrol_sessions.site_id')
+                ->leftJoin('client_details', 'site_details.client_id', '=', 'client_details.id')
                 ->whereIn('patrol_sessions.session', ['Foot', 'Vehicle'])
                 ->where('patrol_sessions.company_id', $companyId)
                 ->whereIn('patrol_sessions.user_id', $accessibleUserIds); // ✅ Role-based filter
@@ -197,7 +199,7 @@ class PatrolController extends Controller
             $patrols = $base->select(
                 'users.id as user_id',
                 'users.name as user_name',
-                'site_details.client_name as range',
+                'client_details.name as range',
                 'site_details.name as beat',
                 'patrol_sessions.started_at',
                 'patrol_sessions.ended_at',
@@ -268,6 +270,8 @@ class PatrolController extends Controller
 
             $base = DB::table('patrol_sessions')
                 ->join('users', 'users.id', '=', 'patrol_sessions.user_id')
+                ->leftJoin('site_details', 'patrol_sessions.site_id', '=', 'site_details.id')
+                ->leftJoin('client_details', 'site_details.client_id', '=', 'client_details.id')
                 ->whereIn('patrol_sessions.session', ['Foot', 'Vehicle'])
                 ->where(function ($base) {
                     $base->whereTime('patrol_sessions.started_at', '>=', '18:00:00')
@@ -298,12 +302,11 @@ class PatrolController extends Controller
 
             /* ================= TABLE ================= */
             $patrolsQuery = (clone $base)
-                ->leftJoin('site_details', 'site_details.id', '=', 'patrol_sessions.site_id')
                 ->select(
                     'patrol_sessions.*',
                     'users.id as user_id',
                     'users.name as user_name',
-                    'site_details.client_name as range',
+                    'client_details.name as range',
                     'site_details.name as beat',
                     DB::raw('ROUND(COALESCE(patrol_sessions.distance,0) / 1000, 2) as distance'),
                     DB::raw('ROUND(
@@ -384,6 +387,7 @@ class PatrolController extends Controller
             $base = DB::table('patrol_sessions')
                 ->join('users', 'users.id', '=', 'patrol_sessions.user_id')
                 ->leftJoin('site_details', 'site_details.id', '=', 'patrol_sessions.site_id')
+                ->leftJoin('client_details', 'site_details.client_id', '=', 'client_details.id')
                 ->whereIn('patrol_sessions.session', ['Foot', 'Vehicle'])
                 ->where(function ($q) {
                     $q->whereTime('patrol_sessions.started_at', '>=', '18:00:00')
@@ -498,6 +502,7 @@ class PatrolController extends Controller
         $session = DB::table('patrol_sessions')
             ->join('users', 'users.id', '=', 'patrol_sessions.user_id')
             ->leftJoin('site_details', 'site_details.id', '=', 'patrol_sessions.site_id')
+            ->leftJoin('client_details', 'site_details.client_id', '=', 'client_details.id')
             ->where('patrol_sessions.id', $sessionId)
             ->where('patrol_sessions.company_id', $companyId)
             ->select(
@@ -508,7 +513,7 @@ class PatrolController extends Controller
                 'users.profile_pic as user_profile',
                 'users.contact as user_contact',
                 'site_details.name as site_name',
-                'site_details.client_name as range_name',
+                'client_details.name as range_name',
                 'site_details.address as site_address',
                 'patrol_sessions.type',
                 'patrol_sessions.session',
@@ -687,6 +692,7 @@ class PatrolController extends Controller
             $base = DB::table('patrol_sessions')
                 ->join('users', 'users.id', '=', 'patrol_sessions.user_id')
                 ->leftJoin('site_details', 'site_details.id', '=', 'patrol_sessions.site_id')
+                ->leftJoin('client_details', 'site_details.client_id', '=', 'client_details.id')
                 ->whereNotNull('patrol_sessions.path_geojson')
                 ->whereNotNull('patrol_sessions.started_at')
                 ->where('patrol_sessions.company_id', $companyId);
@@ -700,7 +706,7 @@ class PatrolController extends Controller
                 'users.name as user_name',
                 'users.profile_pic as user_profile',
                 'site_details.name as site_name',
-                'site_details.client_name as range_name',
+                'client_details.name as range_name',
                 'patrol_sessions.type',
                 'patrol_sessions.session',
                 'patrol_sessions.started_at',
