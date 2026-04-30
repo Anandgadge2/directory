@@ -1,0 +1,192 @@
+/* ===============================
+   BASE LAYOUT
+================================ */
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: #f6f8f7;
+}
+
+/* Main content area */
+.content {
+  margin-left: 240px; /* matched to sidebar width */
+  padding: 20px;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Enforce stacking order */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sidebar Mini Layout Overrides */
+body.sidebar-mini .content {
+  margin-left: 70px;
+}
+
+body.sidebar-mini .left-bg {
+  left: 70px;
+  width: calc(100% - 70px);
+}
+
+/* Mobile Layout Adjustments */
+@media (max-width: 991px) {
+  html,
+  body {
+    overflow: auto !important;
+    height: auto !important;
+  }
+  .content {
+    margin-left: 0 !important;
+    padding: 10px;
+    height: auto !important;
+    min-height: 100vh;
+    overflow-y: visible !important;
+  }
+}
+
+/* ===============================
+   GLOBAL BACKGROUND THEME
+================================ */
+
+/* Main background layers */
+@media (max-width: 991px) {
+  .nature-bg,
+  .left-bg,
+  .right-bg {
+    display: none !important;
+  }
+}
+
+/* Base layer */
+.nature-bg {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 420px;
+  pointer-events: none;
+  opacity: 0.5;
+  background-repeat: no-repeat;
+  background-size: contain;
+  z-index: 0;
+}
+
+/* Left background */
+.left-bg {
+  position: absolute;
+  left: 240px;
+  bottom: 0;
+  width: calc(100% - 240px);
+  height: 155vh;
+  background-image: url("/images/tree.png");
+  background-repeat: no-repeat;
+  background-position: bottom center;
+  background-size: cover;
+  filter: brightness(0.5) contrast(1.2);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Right background */
+.right-bg {
+  position: absolute;
+  left: 100px;
+  top: -290px;
+  background-image: url("/images/3.png");
+  background-position: top right 40px;
+  background-size: 120%;
+  transform: rotate(60deg);
+  filter: brightness(0.7) contrast(1.1);
+}
+
+/* Soft vignette */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0) 55%,
+    rgba(246, 248, 247, 0.85) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ===============================
+   GLOBAL UTILITIES
+================================ */
+
+.sticky-filter {
+  position: sticky;
+  top: 12px;
+  z-index: 50;
+}
+
+.btn-loader {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Ensure content stays above background */
+.container,
+.container-fluid,
+.content,
+.dashboard-grid {
+  position: relative;
+}
+
+/* ===============================
+   MODAL & BACKDROP FIXES
+   Ensuring modals always appear on top of sidebar/navbar
+================================ */
+
+/* Bootstrap handles modal and backdrop z-index automatically (1055 and 1050) */
+
+/* Sidebar and Navbar Layering */
+.sidebar {
+  z-index: 1045 !important; /* Below modals and backdrop */
+}
+
+#mainNavbar,
+.navbar {
+  z-index: 100 !important; /* Above content, below sidebar and modals */
+}
+
+@media (max-width: 991px) {
+  .navbar {
+    padding: 0.5rem 1rem !important;
+  }
+  .navbar-brand img {
+    height: 28px !important;
+  }
+  .navbar-brand + span {
+    font-size: 0.9rem !important;
+  }
+}
+
+/* Ensure data pickers and filters are above content but below modals */
+.sticky-filter {
+  z-index: 25 !important;
+}
+
+/* Prevent layout shifts when modal opens */
+body.modal-open {
+  overflow: hidden;
+  padding-right: 0 !important;
+}

@@ -1,0 +1,195 @@
+.global-filter-wrapper {
+    /* Position handled by parent layout logic now */
+    position: relative; 
+    z-index: 990;
+}
+
+.global-filter-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+.global-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    align-items: stretch;
+}
+
+@media (max-width: 1200px) {
+    .global-filter-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 991px) {
+    .global-filter-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .global-filter-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+}
+
+
+.filter-block {
+    display: flex;
+    flex-direction: column;
+        width: 100%;
+
+}
+
+.filter-block select:disabled {
+    background: #f1f3f1;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.filter-block label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #516b55;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+}
+
+.filter-block select,
+.filter-block input {
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #d9e4d9;
+    padding: 0 10px;
+    font-size: 12.5px;
+    background: #f8fbf8;
+    width: 100%;
+}
+
+.filter-block select:focus,
+.filter-block input:focus {
+    outline: none;
+    border-color: #4f6f52;
+    background: #ffffff;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Smooth entry */
+.animate-slide {
+    animation: slideDown 0.35s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.filter-loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 16px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-weight: 700;
+    color: #2f4f3f;
+    z-index: 40;
+}
+
+.spinner {
+    width: 22px;
+    height: 22px;
+    border: 3px solid #cfdacf;
+    border-top: 3px solid #2f4f3f;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Autocomplete Dropdown Styles */
+.autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #d9e4d9;
+    border-radius: 10px;
+    margin-top: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+}
+
+.autocomplete-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #2f4f3f;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #f0f4f0;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover {
+    background-color: #f8fbf8;
+    color: #4f6f52;
+}
+
+.autocomplete-item:active {
+    background-color: #e8f3e8;
+}
+
+/* Period Badge Styling */
+#globalPeriodBadge {
+    margin-top: 12px;
+}
+
+#globalPeriodBadge .badge {
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    color: #4f6f52 !important;
+    background: #fdfefe !important;
+    border: 1px solid #d9e4d9 !important;
+    padding: 4px 10px !important;
+    border-radius: 6px;
+}
+
+#globalPeriodBadge i {
+    color: #4f6f52;
+}
+
+#globalPeriodBadge strong {
+    color: #2f4f3f;
+    font-weight: 700;
+}

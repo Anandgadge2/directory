@@ -1,0 +1,31 @@
+.kpi-card {
+    padding: 14px;
+    text-align: center;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0,0,0,.08);
+}
+
+.guard-row {
+    cursor: pointer;
+    transition: background .2s ease;
+}
+.guard-row:hover {
+    background: #f1f8f4;
+}
+.guard-row.active {
+    background: #e8f5e9;
+    font-weight: 600;
+}
+
+.map-controls {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    z-index: 999;
+}
+.map-controls button {
+    margin-left: 6px;
+}

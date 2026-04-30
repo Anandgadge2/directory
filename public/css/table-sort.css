@@ -1,0 +1,25 @@
+/* Table Sort Styles */
+.sortable {
+    cursor: pointer;
+    position: relative;
+    padding-right: 20px !important;
+}
+
+.sortable:after {
+    content: "\f124";
+    font-family: "bootstrap-icons";
+    position: absolute;
+    right: 5px;
+    font-size: 0.8em;
+    color: #ccc;
+}
+
+.sortable.asc:after {
+    content: "\f128";
+    color: #000;
+}
+
+.sortable.desc:after {
+    content: "\f126";
+    color: #000;
+}

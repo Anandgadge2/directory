@@ -1,0 +1,8 @@
+{
+    "config": {
+        "platform": {
+            "php": "8.2.12"
+        },
+        "platform-check": false
+    }
+}
