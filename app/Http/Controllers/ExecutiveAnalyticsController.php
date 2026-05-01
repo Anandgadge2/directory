@@ -327,11 +327,11 @@ class ExecutiveAnalyticsController extends Controller
             // Active Guards - Use shared service logic for perfect consistency with tables/modals
             $guardSearch = $this->hasValidFilter('guard_search') ? $this->resolveGuardUserIdFromSearch() : null;
             $userFilter = request('user');
-            
+
             $activeGuards = $this->analyticsService->getActiveGuardsCount(
-                $companyId, 
-                $userFilter ?: $guardSearch, 
-                $accessibleUserIds, 
+                $companyId,
+                $userFilter ?: $guardSearch,
+                $accessibleUserIds,
                 $siteIds
             );
 
@@ -388,9 +388,9 @@ class ExecutiveAnalyticsController extends Controller
             // Get all guards that should be counted for attendance (use same logic as activeGuards)
             // Re-using the logic from getActiveGuards to get IDs for filtering
             $guardIdsQuery = $this->analyticsService->getActiveGuards(
-                $companyId, 
-                $userFilter ?: $guardSearch, 
-                $accessibleUserIds, 
+                $companyId,
+                $userFilter ?: $guardSearch,
+                $accessibleUserIds,
                 $siteIds
             );
             $guardIds = $guardIdsQuery->pluck('id');
@@ -484,17 +484,17 @@ class ExecutiveAnalyticsController extends Controller
                 ->leftJoin('incidence_details', 'incidence_details.inc_id', '=', 'patrol_logs.id')
                 ->where('patrol_sessions.company_id', $companyId)
                 ->whereIn('patrol_sessions.user_id', $accessibleUserIds)
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('patrol_logs.type', 'like', 'animal_sighting%')
-                      ->orWhere('patrol_logs.type', 'like', 'Animal Sighting%')
-                      ->orWhere('patrol_logs.type', 'like', 'water_source%')
-                      ->orWhere('patrol_logs.type', 'like', 'Water Source%')
-                      ->orWhere('patrol_logs.type', 'like', 'human_impact%')
-                      ->orWhere('patrol_logs.type', 'like', 'Human Impact%')
-                      ->orWhere('patrol_logs.type', 'like', 'animal_mortality%')
-                      ->orWhere('patrol_logs.type', 'like', 'Animal Mortality%')
-                      ->orWhere('patrol_logs.type', 'like', 'fire%')
-                      ->orWhere('patrol_logs.type', 'like', 'Fire%');
+                        ->orWhere('patrol_logs.type', 'like', 'Animal Sighting%')
+                        ->orWhere('patrol_logs.type', 'like', 'water_source%')
+                        ->orWhere('patrol_logs.type', 'like', 'Water Source%')
+                        ->orWhere('patrol_logs.type', 'like', 'human_impact%')
+                        ->orWhere('patrol_logs.type', 'like', 'Human Impact%')
+                        ->orWhere('patrol_logs.type', 'like', 'animal_mortality%')
+                        ->orWhere('patrol_logs.type', 'like', 'Animal Mortality%')
+                        ->orWhere('patrol_logs.type', 'like', 'fire%')
+                        ->orWhere('patrol_logs.type', 'like', 'Fire%');
                 });
 
             // Apply canonical filters using passed dates for strict consistency
@@ -503,8 +503,8 @@ class ExecutiveAnalyticsController extends Controller
                 'patrol_logs.created_at',
                 'patrol_sessions.site_id',
                 'patrol_sessions.user_id',
-                false, 
-                false, 
+                false,
+                false,
                 true,
                 $startDate,
                 $endDate
@@ -687,17 +687,17 @@ class ExecutiveAnalyticsController extends Controller
             ->leftJoin('users', 'patrol_sessions.user_id', '=', 'users.id')
             ->where('patrol_sessions.company_id', $companyId)
             ->whereIn('patrol_sessions.user_id', $accessibleUserIds)
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('patrol_logs.type', 'like', 'animal_sighting%')
-                  ->orWhere('patrol_logs.type', 'like', 'Animal Sighting%')
-                  ->orWhere('patrol_logs.type', 'like', 'water_source%')
-                  ->orWhere('patrol_logs.type', 'like', 'Water Source%')
-                  ->orWhere('patrol_logs.type', 'like', 'human_impact%')
-                  ->orWhere('patrol_logs.type', 'like', 'Human Impact%')
-                  ->orWhere('patrol_logs.type', 'like', 'animal_mortality%')
-                  ->orWhere('patrol_logs.type', 'like', 'Animal Mortality%')
-                  ->orWhere('patrol_logs.type', 'like', 'fire%')
-                  ->orWhere('patrol_logs.type', 'like', 'Fire%');
+                    ->orWhere('patrol_logs.type', 'like', 'Animal Sighting%')
+                    ->orWhere('patrol_logs.type', 'like', 'water_source%')
+                    ->orWhere('patrol_logs.type', 'like', 'Water Source%')
+                    ->orWhere('patrol_logs.type', 'like', 'human_impact%')
+                    ->orWhere('patrol_logs.type', 'like', 'Human Impact%')
+                    ->orWhere('patrol_logs.type', 'like', 'animal_mortality%')
+                    ->orWhere('patrol_logs.type', 'like', 'Animal Mortality%')
+                    ->orWhere('patrol_logs.type', 'like', 'fire%')
+                    ->orWhere('patrol_logs.type', 'like', 'Fire%');
             });
 
         $this->applyCanonicalFilters(
@@ -738,9 +738,9 @@ class ExecutiveAnalyticsController extends Controller
         // 4. Recent Incidents (Matching Pending statuses)
         $criticalIncidents = (clone $base)
             ->leftJoin('site_details', 'site_details.id', '=', 'patrol_sessions.site_id')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->whereIn('incidence_details.statusFlag', [0, 3, 4, 5, 6])
-                  ->orWhereNull('incidence_details.statusFlag');
+                    ->orWhereNull('incidence_details.statusFlag');
             })
             ->select(
                 'patrol_logs.id',
@@ -829,7 +829,7 @@ class ExecutiveAnalyticsController extends Controller
             ')
             ->groupBy('type')
             ->get()
-            ->map(function($item) {
+            ->map(function ($item) {
                 // Return total_distance for backward compatibility if needed
                 $item->total_distance_km = round($item->total_distance_raw / 1000, 2);
                 return $item;
@@ -895,7 +895,7 @@ class ExecutiveAnalyticsController extends Controller
             ')
             ->groupBy('site_details.id', 'site_details.name')
             ->get()
-            ->map(function($item) {
+            ->map(function ($item) {
                 $item->total_distance_km = round($item->total_distance_raw / 1000, 2);
                 return $item;
             })
@@ -1251,14 +1251,14 @@ class ExecutiveAnalyticsController extends Controller
 
             // ✅ Use shared service logic for consistency
             $guards = $this->analyticsService->getActiveGuards(
-                $companyId, 
-                $userFilter ?: $guardSearch, 
-                $accessibleUserIds, 
+                $companyId,
+                $userFilter ?: $guardSearch,
+                $accessibleUserIds,
                 $siteIds
             );
 
             // Map data to expected format for modal
-            $formattedGuards = $guards->map(function($g) {
+            $formattedGuards = $guards->map(function ($g) {
                 // Fetch full user details if needed, or rely on service providing them
                 // getActiveGuards currently selects id, name. We need email and phone.
                 $fullUser = DB::table('users')->where('id', $g->id)->first();
@@ -1338,7 +1338,7 @@ class ExecutiveAnalyticsController extends Controller
 
             // Optimized: Use getPatrolAnalytics directly and derive summary from its combined queries
             $analytics = $this->getPatrolAnalytics($startDate, $endDate);
-            
+
             $totalPatrols = $analytics['total_patrols'] ?? 0;
             $completedPatrols = $analytics['completed_patrols'] ?? 0;
             // Sum raw distance first then convert to avoid rounding errors during summation
@@ -1396,14 +1396,14 @@ class ExecutiveAnalyticsController extends Controller
             }
 
             $this->applyCanonicalFilters(
-                $query, 
-                'patrol_sessions.started_at', 
-                'patrol_sessions.site_id', 
-                'patrol_sessions.user_id', 
-                false, 
-                false, 
-                true, 
-                $startDate, 
+                $query,
+                'patrol_sessions.started_at',
+                'patrol_sessions.site_id',
+                'patrol_sessions.user_id',
+                false,
+                false,
+                true,
+                $startDate,
                 $endDate
             );
 
@@ -1420,16 +1420,16 @@ class ExecutiveAnalyticsController extends Controller
                 DB::raw('ROUND(COALESCE(patrol_sessions.distance, 0) / 1000, 2) as distance_km'),
                 'patrol_sessions.session'
             )
-            ->orderByDesc('patrol_sessions.started_at')
-            ->limit(100)
-            ->get()
-            ->map(function($patrol) {
-                $patrol->formatted_start = Carbon::parse($patrol->started_at)->format('d M, h:i A');
-                $patrol->duration = $patrol->ended_at 
-                    ? (int)Carbon::parse($patrol->started_at)->diffInMinutes(Carbon::parse($patrol->ended_at)) . ' mins'
-                    : 'Ongoing';
-                return $patrol;
-            });
+                ->orderByDesc('patrol_sessions.started_at')
+                ->limit(100)
+                ->get()
+                ->map(function ($patrol) {
+                    $patrol->formatted_start = Carbon::parse($patrol->started_at)->format('d M, h:i A');
+                    $patrol->duration = $patrol->ended_at
+                        ? (int) Carbon::parse($patrol->started_at)->diffInMinutes(Carbon::parse($patrol->ended_at)) . ' mins'
+                        : 'Ongoing';
+                    return $patrol;
+                });
 
             return response()->json([
                 'success' => true,
@@ -1465,7 +1465,7 @@ class ExecutiveAnalyticsController extends Controller
             // Avoid calling getKPIs() which is slow and redundant
             $total = $incidentsData['incidentTypes']->sum('count');
             $statusCounts = $incidentsData['statusDistribution'];
-            
+
             $resolved = $statusCounts->get(1, 0);
             $pending = $total - $resolved;
             $rate = $total > 0 ? round(($resolved / $total) * 100, 1) : 0;
@@ -1554,187 +1554,197 @@ class ExecutiveAnalyticsController extends Controller
             // Date validation
             $startDate = $request->filled('start_date') ? Carbon::parse($request->start_date) : Carbon::now()->subDays(30);
             $endDate = $request->filled('end_date') ? Carbon::parse($request->end_date) : Carbon::now();
-            
-            if ($startDate->isFuture()) $startDate = Carbon::now()->subDays(30);
-            if ($endDate->lt($startDate)) { $temp = $startDate; $startDate = $endDate; $endDate = $temp; }
+
+            if ($startDate->isFuture())
+                $startDate = Carbon::now()->subDays(30);
+            if ($endDate->lt($startDate)) {
+                $temp = $startDate;
+                $startDate = $endDate;
+                $endDate = $temp;
+            }
 
             // Apply canonical filters
-        $query = DB::table('patrol_sessions')
-            ->join('users', 'patrol_sessions.user_id', '=', 'users.id')
-            ->leftJoin('site_details', 'patrol_sessions.site_id', '=', 'site_details.id')
-            ->leftJoin('client_details', 'site_details.client_id', '=', 'client_details.id')
-            ->where('patrol_sessions.company_id', $companyId)
-            ->whereNotNull('patrol_sessions.ended_at');
+            $query = DB::table('patrol_sessions')
+                ->join('users', 'patrol_sessions.user_id', '=', 'users.id')
+                ->leftJoin('site_details', 'patrol_sessions.site_id', '=', 'site_details.id')
+                ->leftJoin('client_details', 'site_details.client_id', '=', 'client_details.id')
+                ->where('patrol_sessions.company_id', $companyId)
+                ->whereNotNull('patrol_sessions.ended_at');
 
-        // ✅ Role-based filter
-        $accessibleUserIds = RoleBasedFilterService::getAccessibleUserIds();
-        $query->whereIn('patrol_sessions.user_id', $accessibleUserIds);
+            // ✅ Role-based filter
+            $accessibleUserIds = RoleBasedFilterService::getAccessibleUserIds();
+            $query->whereIn('patrol_sessions.user_id', $accessibleUserIds);
 
-        // Apply range/site/user filters from request
-        $this->applyCanonicalFilters(
-            $query,
-            'patrol_sessions.started_at',
-            'patrol_sessions.site_id',
-            'patrol_sessions.user_id',
-            false, 
-            false, 
-            true,
-            $startDate,
-            $endDate
-        );
+            // Apply range/site/user filters from request
+            $this->applyCanonicalFilters(
+                $query,
+                'patrol_sessions.started_at',
+                'patrol_sessions.site_id',
+                'patrol_sessions.user_id',
+                false,
+                false,
+                true,
+                $startDate,
+                $endDate
+            );
 
-        // 1. Get detailed breakdown (Guard + Site)
-        $breakdown = (clone $query)
-            ->select(
-                'users.id',
-                'users.name as guard_name',
-                'users.contact as phone',
-                'site_details.name as site_name',
-                'client_details.name as range_name',
-                DB::raw('SUM(patrol_sessions.distance) / 1000 as total_distance_km')
-            )
-            ->groupBy('users.id', 'users.name', 'users.contact', 'site_details.name', 'client_details.name')
-            ->orderByDesc('total_distance_km')
-            ->limit(50)
-            ->get();
+            // 1. Get detailed breakdown (Guard + Site)
+            $breakdown = (clone $query)
+                ->select(
+                    'users.id',
+                    'users.name as guard_name',
+                    'users.contact as phone',
+                    'site_details.name as site_name',
+                    'client_details.name as range_name',
+                    DB::raw('SUM(patrol_sessions.distance) / 1000 as total_distance_km')
+                )
+                ->groupBy('users.id', 'users.name', 'users.contact', 'site_details.name', 'client_details.name')
+                ->orderByDesc('total_distance_km')
+                ->limit(50)
+                ->get();
 
-        // 2. Get Summary for the period
-        $summaryQuery = clone $query;
-        $totalDistance = round($summaryQuery->sum('patrol_sessions.distance') / 1000, 2);
-        $activeGuardsCount = $summaryQuery->distinct('patrol_sessions.user_id')->count('patrol_sessions.user_id');
-        $avgDistance = $activeGuardsCount > 0 ? round($totalDistance / $activeGuardsCount, 2) : 0;
+            // 2. Get Summary for the period
+            $summaryQuery = clone $query;
+            $totalDistance = round($summaryQuery->sum('patrol_sessions.distance') / 1000, 2);
+            $activeGuardsCount = $summaryQuery->distinct('patrol_sessions.user_id')->count('patrol_sessions.user_id');
+            $avgDistance = $activeGuardsCount > 0 ? round($totalDistance / $activeGuardsCount, 2) : 0;
 
-        return response()->json([
-            'success' => true,
-            'summary' => [
-                'total_distance_km' => $totalDistance,
-                'avg_distance_km' => $avgDistance,
-                'active_guards' => $activeGuardsCount
-            ],
-            'breakdown' => $breakdown
-        ]);
+            return response()->json([
+                'success' => true,
+                'summary' => [
+                    'total_distance_km' => $totalDistance,
+                    'avg_distance_km' => $avgDistance,
+                    'active_guards' => $activeGuardsCount
+                ],
+                'breakdown' => $breakdown
+            ]);
 
-    } catch (\Exception $e) {
-        Log::error('Distance Details API Error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage()
-        ], 500);
-    }
-}
-
-/**
- * API endpoint to get comprehensive attendance details for modal
- */
-public function getAttendanceDetailsApi(Request $request)
-{
-    try {
-        $user = session('user');
-        $companyId = ($user && isset($user->company_id)) ? $user->company_id : 56;
-
-        $startDate = $request->filled('start_date') ? Carbon::parse($request->start_date) : Carbon::now()->subDays(30);
-        $endDate = $request->filled('end_date') ? Carbon::parse($request->end_date) : Carbon::now();
-        
-        if ($startDate->isFuture()) $startDate = Carbon::now()->subDays(30);
-        if ($endDate->lt($startDate)) { $temp = $startDate; $startDate = $endDate; $endDate = $temp; }
-
-        $accessibleUserIds = RoleBasedFilterService::getAccessibleUserIds();
-
-        $query = DB::table('attendance')
-            ->join('users', 'attendance.user_id', '=', 'users.id')
-            ->leftJoin('site_details', 'attendance.site_id', '=', 'site_details.id')
-            ->leftJoin('client_details', 'site_details.client_id', '=', 'client_details.id')
-            ->where('attendance.company_id', $companyId)
-            ->whereIn('attendance.user_id', $accessibleUserIds);
-
-        $this->applyCanonicalFilters(
-            $query,
-            'attendance.dateFormat',
-            'attendance.site_id',
-            'attendance.user_id',
-            false, 
-            false, 
-            true,
-            $startDate,
-            $endDate
-        );
-
-        $summaryQuery = clone $query;
-        $presentCount = (clone $summaryQuery)->count();
-        
-        // 1. Resolve Site IDs from Range/Beat filters
-        $siteIds = $this->resolveSiteIds();
-        $guardSearch = $this->hasValidFilter('guard_search') ? $this->resolveGuardUserIdFromSearch() : null;
-        $userFilter = request('user');
-
-        // 2. Get Active Guards using unified service (matches KPI tile logic)
-        $activeGuardsQuery = $this->analyticsService->getActiveGuards(
-            $companyId, 
-            $userFilter ?: $guardSearch, 
-            $accessibleUserIds, 
-            $siteIds
-        );
-        $activeGuardsCount = $activeGuardsQuery->count();
-        $guardIds = $activeGuardsQuery->pluck('id');
-
-        // 3. Guards Present Today specifically (matches KPI tile subtext)
-        $presentTodayQuery = DB::table('attendance')
-            ->where('attendance.company_id', $companyId)
-            ->where('attendance.dateFormat', now()->format('Y-m-d'))
-            ->whereIn('attendance.user_id', $accessibleUserIds);
-
-        // Apply same filtering as attendance main query
-        if (!empty($siteIds)) {
-            $presentTodayQuery->whereIn('attendance.site_id', $siteIds);
+        } catch (\Exception $e) {
+            Log::error('Distance Details API Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        if ($guardIds->isNotEmpty()) {
-            $presentTodayQuery->whereIn('attendance.user_id', $guardIds);
-        } else {
-            $presentTodayQuery->whereRaw('1 = 0');
-        }
-
-        $presentCountToday = $presentTodayQuery->count();
-
-        // 4. Attendance Rate calculation
-        $daysInRange = (int)($startDate->diffInDays($endDate) + 1);
-        $totalPossible = $activeGuardsCount * $daysInRange;
-        $attendanceRate = $totalPossible > 0 ? round(($presentCount / $totalPossible) * 100, 1) : 0;
-
-        $breakdown = (clone $query)
-            ->select(
-                'users.id',
-                'users.name as guard_name',
-                'users.contact as phone',
-                'client_details.name as range_name',
-                'site_details.name as site_name',
-                DB::raw('COUNT(*) as present_days'),
-                DB::raw('SUM(CASE WHEN attendance.lateTime > 0 THEN 1 ELSE 0 END) as late_days'),
-                DB::raw('AVG(CASE WHEN attendance.lateTime > 0 THEN attendance.lateTime ELSE NULL END) as avg_late_mins')
-            )
-            ->groupBy('users.id', 'users.name', 'users.contact', 'client_details.name', 'site_details.name')
-            ->orderByDesc('present_days')
-            ->limit(50)
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'summary' => [
-                'present_count' => $presentCount,
-                'present_count_today' => $presentCountToday,
-                'attendance_rate' => $attendanceRate,
-                'active_guards' => $activeGuardsCount,
-                'days_in_range' => $daysInRange
-            ],
-            'breakdown' => $breakdown
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Attendance Details API Error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage()
-        ], 500);
     }
-}
+
+    /**
+     * API endpoint to get comprehensive attendance details for modal
+     */
+    public function getAttendanceDetailsApi(Request $request)
+    {
+        try {
+            $user = session('user');
+            $companyId = ($user && isset($user->company_id)) ? $user->company_id : 56;
+
+            $startDate = $request->filled('start_date') ? Carbon::parse($request->start_date) : Carbon::now()->subDays(30);
+            $endDate = $request->filled('end_date') ? Carbon::parse($request->end_date) : Carbon::now();
+
+            if ($startDate->isFuture())
+                $startDate = Carbon::now()->subDays(30);
+            if ($endDate->lt($startDate)) {
+                $temp = $startDate;
+                $startDate = $endDate;
+                $endDate = $temp;
+            }
+
+            $accessibleUserIds = RoleBasedFilterService::getAccessibleUserIds();
+
+            $query = DB::table('attendance')
+                ->join('users', 'attendance.user_id', '=', 'users.id')
+                ->leftJoin('site_details', 'attendance.site_id', '=', 'site_details.id')
+                ->leftJoin('client_details', 'site_details.client_id', '=', 'client_details.id')
+                ->where('attendance.company_id', $companyId)
+                ->whereIn('attendance.user_id', $accessibleUserIds);
+
+            $this->applyCanonicalFilters(
+                $query,
+                'attendance.dateFormat',
+                'attendance.site_id',
+                'attendance.user_id',
+                false,
+                false,
+                true,
+                $startDate,
+                $endDate
+            );
+
+            $summaryQuery = clone $query;
+            $presentCount = (clone $summaryQuery)->count();
+
+            // 1. Resolve Site IDs from Range/Beat filters
+            $siteIds = $this->resolveSiteIds();
+            $guardSearch = $this->hasValidFilter('guard_search') ? $this->resolveGuardUserIdFromSearch() : null;
+            $userFilter = request('user');
+
+            // 2. Get Active Guards using unified service (matches KPI tile logic)
+            $activeGuardsQuery = $this->analyticsService->getActiveGuards(
+                $companyId,
+                $userFilter ?: $guardSearch,
+                $accessibleUserIds,
+                $siteIds
+            );
+            $activeGuardsCount = $activeGuardsQuery->count();
+            $guardIds = $activeGuardsQuery->pluck('id');
+
+            // 3. Guards Present Today specifically (matches KPI tile subtext)
+            $presentTodayQuery = DB::table('attendance')
+                ->where('attendance.company_id', $companyId)
+                ->where('attendance.dateFormat', now()->format('Y-m-d'))
+                ->whereIn('attendance.user_id', $accessibleUserIds);
+
+            // Apply same filtering as attendance main query
+            if (!empty($siteIds)) {
+                $presentTodayQuery->whereIn('attendance.site_id', $siteIds);
+            }
+
+            if ($guardIds->isNotEmpty()) {
+                $presentTodayQuery->whereIn('attendance.user_id', $guardIds);
+            } else {
+                $presentTodayQuery->whereRaw('1 = 0');
+            }
+
+            $presentCountToday = $presentTodayQuery->count();
+
+            // 4. Attendance Rate calculation
+            $daysInRange = (int) ($startDate->diffInDays($endDate) + 1);
+            $totalPossible = $activeGuardsCount * $daysInRange;
+            $attendanceRate = $totalPossible > 0 ? round(($presentCount / $totalPossible) * 100, 1) : 0;
+
+            $breakdown = (clone $query)
+                ->select(
+                    'users.id',
+                    'users.name as guard_name',
+                    'users.contact as phone',
+                    'client_details.name as range_name',
+                    'site_details.name as site_name',
+                    DB::raw('COUNT(*) as present_days'),
+                    DB::raw('SUM(CASE WHEN attendance.lateTime > 0 THEN 1 ELSE 0 END) as late_days'),
+                    DB::raw('AVG(CASE WHEN attendance.lateTime > 0 THEN attendance.lateTime ELSE NULL END) as avg_late_mins')
+                )
+                ->groupBy('users.id', 'users.name', 'users.contact', 'client_details.name', 'site_details.name')
+                ->orderByDesc('present_days')
+                ->limit(50)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'summary' => [
+                    'present_count' => $presentCount,
+                    'present_count_today' => $presentCountToday,
+                    'attendance_rate' => $attendanceRate,
+                    'active_guards' => $activeGuardsCount,
+                    'days_in_range' => $daysInRange
+                ],
+                'breakdown' => $breakdown
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Attendance Details API Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
