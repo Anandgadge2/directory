@@ -328,13 +328,12 @@ class ExecutiveAnalyticsController extends Controller
             $guardSearch = $this->hasValidFilter('guard_search') ? $this->resolveGuardUserIdFromSearch() : null;
             $userFilter = request('user');
             
-            $activeGuardsQuery = $this->analyticsService->getActiveGuards(
+            $activeGuards = $this->analyticsService->getActiveGuardsCount(
                 $companyId, 
                 $userFilter ?: $guardSearch, 
                 $accessibleUserIds, 
                 $siteIds
             );
-            $activeGuards = $activeGuardsQuery->count();
 
             Log::debug('Active Guards Count (Service Unified)', ['count' => $activeGuards, 'companyId' => $companyId]);
 
@@ -387,9 +386,16 @@ class ExecutiveAnalyticsController extends Controller
             // Attendance rate = (Total present records / Total possible) × 100
 
             // Get all guards that should be counted for attendance (use same logic as activeGuards)
-            $guardIds = $activeGuardsQuery->pluck('id');
+            // Re-using the logic from getActiveGuards to get IDs for filtering
+            $guardIdsQuery = $this->analyticsService->getActiveGuards(
+                $companyId, 
+                $userFilter ?: $guardSearch, 
+                $accessibleUserIds, 
+                $siteIds
+            );
+            $guardIds = $guardIdsQuery->pluck('id');
 
-            $totalGuardsForAttendance = $guardIds->count();
+            $totalGuardsForAttendance = $activeGuards; // Re-use the optimized count from above
 
             // Count present records - Apply canonical filters
             $attendanceQuery = DB::table('attendance')

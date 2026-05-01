@@ -16,6 +16,21 @@ return Application::configure(basePath: dirname(__DIR__))
             'role.filters' => \App\Http\Middleware\ApplyRoleFilters::class,
         ]);
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
-        //
+    ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->render(function (\Throwable $e, $request) {
+            // Check for 419 Token Mismatch
+            $is419 = $e instanceof \Illuminate\Session\TokenMismatchException || 
+                     (method_exists($e, 'getStatusCode') && $e->getStatusCode() === 419);
+
+            if ($is419) {
+                \Illuminate\Support\Facades\Log::warning('419 Error Detected', [
+                    'url' => $request->fullUrl(),
+                    'session_id' => session()->getId(),
+                    'ip' => $request->ip()
+                ]);
+
+                return redirect()->route('login')
+                    ->with('error', 'Your session expired due to inactivity. Please login again.');
+            }
+        });
     })->create();

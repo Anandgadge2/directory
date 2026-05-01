@@ -333,6 +333,48 @@ class AnalyticsDataService
     }
 
     /**
+     * Optimized version of getActiveGuards that returns ONLY the count.
+     * Use this for KPIs to avoid loading thousands of objects into memory.
+     */
+    public function getActiveGuardsCount($companyId, $userId = null, ?array $accessibleUserIds = null, array $siteIds = [])
+    {
+        $query = DB::table('users')
+            ->where('users.company_id', $companyId)
+            ->where('users.isActive', 1)
+            ->where('users.role_id', '!=', 1);
+
+        if ($userId) {
+            $query->where('users.id', $userId);
+        }
+
+        if (!empty($siteIds)) {
+            $query->where(function ($q) use ($siteIds, $companyId) {
+                $q->whereIn('users.id', function ($sub) use ($siteIds, $companyId) {
+                    $sub->select('user_id')->from('site_assign')->where('company_id', $companyId)
+                        ->where(function ($s) use ($siteIds) {
+                            foreach ($siteIds as $siteId) {
+                                $s->orWhereRaw('JSON_CONTAINS(site_id, ?)', [json_encode((string)$siteId)])
+                                  ->orWhereRaw('FIND_IN_SET(?, site_id)', [$siteId]);
+                            }
+                        });
+                })->orWhereIn('users.id', function ($sub) use ($siteIds, $companyId) {
+                    $sub->select('user_id')->from('patrol_sessions')->where('company_id', $companyId)->whereIn('site_id', $siteIds);
+                });
+            });
+        }
+
+        if ($accessibleUserIds !== null) {
+            if (!empty($accessibleUserIds)) {
+                $query->whereIn('users.id', $accessibleUserIds);
+            } else {
+                return 0;
+            }
+        }
+
+        return $query->count();
+    }
+
+    /**
      * Get comprehensive guard performance data
      * Combines all statistics into one result set.
      * SuperAdmins (role_id = 1) are never included.

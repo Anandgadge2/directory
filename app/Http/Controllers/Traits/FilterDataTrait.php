@@ -13,8 +13,14 @@ trait FilterDataTrait
      * unless we want to show sites assigned to that user.
      * For now, we filter DATA by user_id separately.)
      */
+    protected $resolvedSiteIds = null;
+
     protected function resolveSiteIds(): array
     {
+        if ($this->resolvedSiteIds !== null) {
+            return $this->resolvedSiteIds;
+        }
+
         $q = DB::table('site_details')->select('site_details.id');
 
         // 🔥 Role-based: only show sites the current user is authorized to see
@@ -36,7 +42,8 @@ trait FilterDataTrait
             $q->where('site_details.id', request('beat'));
         }
 
-        return $q->pluck('id')->toArray();
+        $this->resolvedSiteIds = $q->pluck('id')->toArray();
+        return $this->resolvedSiteIds;
     }
 
     /**

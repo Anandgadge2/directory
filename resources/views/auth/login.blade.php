@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Forest Guard Analytics</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -220,6 +221,28 @@
             border-color: #e53e3e;
         }
 
+        .alert {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .alert-error {
+            background: #fff5f5;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .btn-login {
             width: 100%;
             padding: 13px;
@@ -292,6 +315,20 @@
             <p class="subtitle">Sign in to access Forest Guard Analytics</p>
         </div>
 
+        @if (session('error'))
+            <div class="alert alert-error">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                {{ session('error') }}
+            </div>
+        @endif
+
+        @if (session('success'))
+            <div class="alert" style="background: #f0fff4; color: #276749; border: 1px solid #9ae6b4;">
+                <i class="bi bi-check-circle-fill"></i>
+                {{ session('success') }}
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('login') }}" id="loginForm">
             @csrf
 
@@ -351,6 +388,27 @@
                 // Toggle icon
                 this.classList.toggle('bi-eye');
                 this.classList.toggle('bi-eye-slash');
+            });
+        }
+
+        // --- Session/CSRF Protection ---
+        // If the page was loaded from cache (bfcache), the CSRF token might be stale.
+        // This ensures the page refreshes if the user comes back to a stale login form.
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+
+        // Prevent double submission which can also cause CSRF confusion
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', function() {
+                const btn = this.querySelector('.btn-login');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Signing in...';
+                }
             });
         }
     </script>

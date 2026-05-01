@@ -11,6 +11,11 @@ use App\Models\SiteDetail;
 class RoleBasedFilterService
 {
     /**
+     * Internal cache to prevent redundant DB queries during a single request
+     */
+    private static $cache = [];
+
+    /**
      * Helper: Safely get user property (handles both object and array)
      */
     private static function getUserProperty($user, string $property)
@@ -31,6 +36,10 @@ class RoleBasedFilterService
      */
     public static function getAccessibleUserIds(): array
     {
+        if (isset(self::$cache['user_ids'])) {
+            return self::$cache['user_ids'];
+        }
+
         $authUser = session('user');
 
         if (!$authUser) {
@@ -49,11 +58,14 @@ class RoleBasedFilterService
          * 🔥 SUPERADMIN (role_id = 1) - Can see role_id 2, 3, 7 only (never other SuperAdmins)
          */
         if ($roleId == 1) {
-            return DB::table('users')
+            $result = DB::table('users')
                 ->where('company_id', $companyId)
                 ->whereIn('role_id', [2, 3, 7])
                 ->pluck('id')
                 ->toArray();
+            
+            self::$cache['user_ids'] = $result;
+            return $result;
         }
 
         /**
@@ -104,9 +116,11 @@ class RoleBasedFilterService
                     array_merge($supervisorIds, $employeeIds)
                 );
 
+                self::$cache['user_ids'] = $userIdArray;
                 return $userIdArray;
             }
 
+            self::$cache['user_ids'] = [];
             return [];
         }
 
@@ -153,12 +167,16 @@ class RoleBasedFilterService
                 ->values()
                 ->toArray();
 
-            // Only assigned guards (role 3); supervisor does not see themselves in lists
-            return array_unique($employeeIds);
+            $result = array_unique($employeeIds);
+            self::$cache['user_ids'] = $result;
+            return $result;
         }
 
         // Default: only the user themselves
-        return [$userId];
+        $result = [$userId];
+
+        self::$cache['user_ids'] = $result;
+        return $result;
     }
 
     /**
@@ -168,6 +186,10 @@ class RoleBasedFilterService
      */
     public static function getAccessibleSiteIds(): array
     {
+        if (isset(self::$cache['site_ids'])) {
+            return self::$cache['site_ids'];
+        }
+
         $authUser = session('user');
 
         if (!$authUser) {
@@ -185,7 +207,9 @@ class RoleBasedFilterService
          * 🔥 SUPERADMIN (role_id = 1) - Can see all sites
          */
         if ($roleId == 1) {
-            return DB::table('site_details')->pluck('id')->toArray();
+            $result = DB::table('site_details')->pluck('id')->toArray();
+            self::$cache['site_ids'] = $result;
+            return $result;
         }
 
         /**
@@ -207,9 +231,11 @@ class RoleBasedFilterService
                     ->pluck('id')
                     ->toArray();
 
+                self::$cache['site_ids'] = $siteArray;
                 return $siteArray;
             }
 
+            self::$cache['site_ids'] = [];
             return [];
         }
 
@@ -226,14 +252,19 @@ class RoleBasedFilterService
                     $siteIds = [$siteIds];
                 }
 
+                self::$cache['site_ids'] = $siteIds;
                 return $siteIds;
             }
 
+            self::$cache['site_ids'] = [];
             return [];
         }
 
         // Default: no sites
-        return [];
+        $result = [];
+
+        self::$cache['site_ids'] = $result;
+        return $result;
     }
 
     /**
@@ -243,6 +274,10 @@ class RoleBasedFilterService
      */
     public static function getAccessibleClientIds(): array
     {
+        if (isset(self::$cache['client_ids'])) {
+            return self::$cache['client_ids'];
+        }
+
         $authUser = session('user');
 
         if (!$authUser) {
@@ -303,7 +338,10 @@ class RoleBasedFilterService
         }
 
         // Default: no clients
-        return [];
+        $result = [];
+
+        self::$cache['client_ids'] = $result;
+        return $result;
     }
 
     /**
