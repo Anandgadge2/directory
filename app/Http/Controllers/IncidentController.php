@@ -28,7 +28,7 @@ class IncidentController extends Controller
             ->where('forest_reports.company_id', $companyId)
             ->whereIn('forest_reports.user_id', $accessibleUserIds);
 
-        $this->applyCanonicalFilters($base, 'forest_reports.created_at', null, 'forest_reports.user_id');
+        $this->applyCanonicalFilters($base, 'forest_reports.created_at', 'forest_reports.site_id', 'forest_reports.user_id');
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $base->whereBetween('forest_reports.created_at', [
@@ -258,8 +258,14 @@ class IncidentController extends Controller
             $incident->priority = $payload['priority'] ?? 'Medium';
             
             // Fallback for photo if forest_reports.photo is null but available in payload
-            if (!$incident->photo) {
-                $incident->photo = $payload['photo_evidence'] ?? ($payload['photo'] ?? null);
+            if (!$incident->photo || $incident->photo === '[]') {
+                $rawPhoto = $payload['upload_photo_of_evidence'] ?? ($payload['upload_site_photo'] ?? ($payload['photo_evidence'] ?? ($payload['photo'] ?? null)));
+                $incident->photo = is_array($rawPhoto) ? ($rawPhoto[0] ?? null) : $rawPhoto;
+            }
+            
+            // Standardize photo URL for forest_reports
+            if ($incident->photo && !str_starts_with($incident->photo, 'http') && !str_starts_with($incident->photo, 'data:')) {
+                $incident->photo = "https://fms.pugarch.in/public/profilepics/forest_reports/" . ltrim($incident->photo, '/');
             }
             
             return response()->json([
@@ -342,6 +348,28 @@ class IncidentController extends Controller
         $incident->type = $incident->type ?? 'Incident';
         $incident->created_at = $incident->created_at ?? now()->toDateTimeString();
 
+        // Extract photo and notes from payload if not already set (for patrol_logs source)
+        if (isset($incident->payload)) {
+            $payload = json_decode($incident->payload, true);
+            if (is_array($payload)) {
+                if (empty($incident->photo) || $incident->photo === '[]') {
+                    $rawPhoto = $payload['upload_photo_of_evidence'] ?? ($payload['upload_site_photo'] ?? ($payload['photo_evidence'] ?? ($payload['photo'] ?? null)));
+                    $incident->photo = is_array($rawPhoto) ? ($rawPhoto[0] ?? null) : $rawPhoto;
+                }
+                if (empty($incident->notes)) {
+                    $incident->notes = $payload['remark'] ?? $payload['notes'] ?? ($payload['observation'] ?? null);
+                }
+            }
+        }
+        
+        // Ensure some notes exist
+        $incident->notes = $incident->notes ?? ($incident->details_remark ?? 'No specific observations recorded.');
+
+        // Standardize photo URL for fallback/legacy records
+        if (!empty($incident->photo) && !str_starts_with($incident->photo, 'http') && !str_starts_with($incident->photo, 'data:')) {
+            $incident->photo = "https://fms.pugarch.in/public/profilepics/forest_reports/" . ltrim($incident->photo, '/');
+        }
+
         $comments = DB::table('incidence_comment')
             ->where('incidence_id', $incidenceIdForComments)
             ->orderBy('id', 'desc')
@@ -382,21 +410,24 @@ class IncidentController extends Controller
                 $mappedType = match(strtolower($type)) {
                     'animal sightings' => 'sighting',
                     'animal sighting' => 'sighting',
-                    'human impact' => ['felling', 'encroachment', 'poaching', 'animal_damage'],
+                    'animal_sighting' => 'sighting',
                     'water sources' => 'water_status',
                     'water source' => 'water_status',
-                    'mortality' => 'mortality',
-                    'animal mortality' => 'mortality',
+                    'water_source' => 'water_status',
+                    'water_status' => 'water_status',
                     'fire' => 'fire',
+                    'fire incidents' => 'fire',
                     'birds' => ['bird_sighting', 'bird'],
                     'bird' => ['bird_sighting', 'bird'],
-                    'butterflies' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
-                    'butterfly' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
-                    'insects' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
-                    'insect' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
                     'insect/butterfly' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
                     'insect_butterfly' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
-                    'insects_butterflies' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
+                    'illegal felling' => ['felling', 'illegal_felling', 'felling_kqzb', 'Illegal Felling'],
+                    'poaching' => ['poaching', 'Wild Animal Poaching'],
+                    'illegal mining' => ['mining', 'Illegal Mining'],
+                    'encroachment' => 'encroachment',
+                    'timber/storage' => ['storage', 'transport', 'illegal_timber_storage', 'Illegal Timber Storage', 'Illegal Timber Transport'],
+                    'mortality' => 'mortality',
+                    'animal mortality' => 'mortality',
                     default => $type
                 };
 
@@ -411,7 +442,11 @@ class IncidentController extends Controller
                 $query->where('forest_reports.range', 'like', $type . '%');
             }
 
-            $this->applyCanonicalFilters($query, 'forest_reports.created_at', null, 'forest_reports.user_id');
+            if ($request->filled('session')) {
+                $query->where('patrol_sessions.session', $request->input('session'));
+            }
+
+            $this->applyCanonicalFilters($query, 'forest_reports.created_at', 'forest_reports.site_id', 'forest_reports.user_id');
 
             if ($request->filled('start_date') && $request->filled('end_date')) {
                 $query->whereBetween('forest_reports.created_at', [
@@ -424,6 +459,8 @@ class IncidentController extends Controller
                 forest_reports.id,
                 forest_reports.report_type as type,
                 forest_reports.created_at,
+                forest_reports.photo,
+                forest_reports.report_data,
                 users.name as guard,
                 forest_reports.beat as beat_name,
                 forest_reports.range as range_name,
@@ -438,7 +475,23 @@ class IncidentController extends Controller
             ')
             ->orderByDesc('forest_reports.created_at')
             ->limit(100)
-            ->get();
+            ->get()
+            ->map(function ($incident) {
+                if ((empty($incident->photo) || $incident->photo === '[]') && !empty($incident->report_data)) {
+                    $payload = json_decode($incident->report_data, true);
+                    if (is_array($payload)) {
+                        $rawPhoto = $payload['upload_photo_of_evidence'] ?? ($payload['upload_site_photo'] ?? ($payload['photo_evidence'] ?? ($payload['photo'] ?? null)));
+                        $incident->photo = is_array($rawPhoto) ? ($rawPhoto[0] ?? null) : $rawPhoto;
+                    }
+                }
+                
+                // Standardize photo URL
+                if (!empty($incident->photo) && !str_starts_with($incident->photo, 'http') && !str_starts_with($incident->photo, 'data:')) {
+                    $incident->photo = "https://fms.pugarch.in/public/profilepics/forest_reports/" . ltrim($incident->photo, '/');
+                }
+                
+                return $incident;
+            });
 
             return response()->json(['type' => $type, 'incidents' => $incidents]);
         }
@@ -511,7 +564,7 @@ class IncidentController extends Controller
 
         // Optional User Filter
         if ($request->filled('user')) {
-            $query->where('incidence_details.guard_id', $request->user);
+            $query->where('incidence_details.guard_id', $request->input('user'));
         }
 
         $incidents = $query->selectRaw('

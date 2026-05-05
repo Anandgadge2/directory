@@ -269,8 +269,14 @@ window.openIncidentDetail = async function(id) {
                     </div>
                 </div>
                 <div class="p-4">
-                    <img src="${inc.photo ? ((inc.photo.startsWith('data:') || inc.photo.startsWith('http')) ? inc.photo : '/storage/'+inc.photo) : 'https://placehold.co/600x400?text=No+Evidence'}" class="img-fluid rounded border mb-3" onerror="this.src='https://placehold.co/600x400?text=Error+Loading+Evidence'">
-                    <p class="mb-0 text-dark">${inc.notes || 'No notes.'}</p>
+                    <img src="${inc.photo ? ((inc.photo.startsWith('data:') || inc.photo.startsWith('http')) ? inc.photo : (inc.photo.startsWith('/') ? inc.photo : '/storage/'+inc.photo)) : 'https://placehold.co/600x400?text=No+Evidence'}" 
+                         class="img-fluid rounded border mb-3 shadow-sm w-100" 
+                         onerror="let s=this.src; if(s.includes('/storage/public/')){this.src=s.replace('/storage/public/','/public/');} else if(s.includes('/storage/')){this.src=s.replace('/storage/','/public/');} else {this.src='https://placehold.co/600x400?text=Error+Loading+Image';}"
+                         style="max-height: 400px; object-fit: contain;">
+                    <div class="p-3 bg-light rounded border-start border-4 border-primary">
+                        <h6 class="extra-small text-muted text-uppercase fw-bold mb-2"><i class="bi bi-chat-right-quote-fill me-1"></i> Observations</h6>
+                        <p class="mb-0 text-dark italic">${inc.notes || 'No specific observations recorded.'}</p>
+                    </div>
                 </div>
             </div>
         `;

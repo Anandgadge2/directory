@@ -232,7 +232,10 @@ window.openIncidentDetail = async function(id) {
                             <h6 class="extra-small text-muted text-uppercase fw-bold mb-3"><i class="bi bi-camera-fill me-1"></i> Incident Evidence</h6>
                             <div class="rounded-3 overflow-hidden border bg-light shadow-sm" style="height: 160px;">
                                 ${inc.photo ? 
-                                    `<img src="${(inc.photo.startsWith('data:') || inc.photo.startsWith('http')) ? inc.photo : '/storage/'+inc.photo}" class="w-100 h-100 object-fit-cover cursor-zoom-in" onclick="window.open(this.src, '_blank')">` : 
+                                    `<img src="${(inc.photo.startsWith('data:') || inc.photo.startsWith('http')) ? inc.photo : (inc.photo.startsWith('/') ? inc.photo : '/storage/'+inc.photo)}" 
+                                          class="w-100 h-100 object-fit-cover cursor-zoom-in" 
+                                          onerror="let s=this.src; if(s.includes('/storage/public/')){this.src=s.replace('/storage/public/','/public/');} else if(s.includes('/storage/')){this.src=s.replace('/storage/','/public/');} else {this.src='https://placehold.co/600x400?text=Error+Loading+Image';}"
+                                          onclick="window.open(this.src, '_blank')">` : 
                                     `<div class="d-flex flex-column align-items-center justify-content-center h-100 opacity-50">
                                         <i class="bi bi-image fs-1"></i>
                                         <div class="extra-small">No photo uploaded</div>
@@ -287,7 +290,19 @@ window.showIncidentsByType = async function(key, label, extraParams = {}) {
     modal.show();
 
     try {
+        const range = document.getElementById('rangeSelect')?.value;
+        const beat = document.getElementById('beatSelect')?.value;
+        const user = document.getElementById('userSelect')?.value;
+        const start = document.getElementById('startDateInput')?.value;
+        const end = document.getElementById('endDateInput')?.value;
+
         let url = `/incidents/type/${key}?source=forest_reports&`;
+        if (range) url += `range=${encodeURIComponent(range)}&`;
+        if (beat) url += `beat=${encodeURIComponent(beat)}&`;
+        if (user) url += `user=${encodeURIComponent(user)}&`;
+        if (start) url += `start_date=${encodeURIComponent(start)}&`;
+        if (end) url += `end_date=${encodeURIComponent(end)}&`;
+
         Object.keys(extraParams).forEach(k => {
             url += `${k}=${encodeURIComponent(extraParams[k])}&`;
         });
