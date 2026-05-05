@@ -253,7 +253,7 @@ window.openIncidentDetail = async function(id) {
                     </div>
                 </div>
                 <div class="p-4">
-                    <img src="${inc.photo ? (inc.photo.startsWith('data:') ? inc.photo : '/storage/'+inc.photo) : 'https://placehold.co/600x400?text=No+Evidence'}" class="img-fluid rounded border mb-3">
+                    <img src="${inc.photo ? ((inc.photo.startsWith('data:') || inc.photo.startsWith('http')) ? inc.photo : '/storage/'+inc.photo) : 'https://placehold.co/600x400?text=No+Evidence'}" class="img-fluid rounded border mb-3">
                     <p class="mb-0 text-dark">${inc.notes || 'No notes.'}</p>
                 </div>
             </div>

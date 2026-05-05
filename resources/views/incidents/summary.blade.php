@@ -232,7 +232,7 @@ async function openIncidentDetail(id) {
                             <h6 class="extra-small text-muted text-uppercase fw-bold mb-3"><i class="bi bi-camera-fill me-1"></i> Incident Evidence</h6>
                             <div class="rounded-3 overflow-hidden border bg-light shadow-sm" style="height: 160px;">
                                 ${inc.photo ? 
-                                    `<img src="${inc.photo.startsWith('data:') ? inc.photo : '/storage/'+inc.photo}" class="w-100 h-100 object-fit-cover cursor-zoom-in" onclick="window.open(this.src, '_blank')">` : 
+                                    `<img src="${(inc.photo.startsWith('data:') || inc.photo.startsWith('http')) ? inc.photo : '/storage/'+inc.photo}" class="w-100 h-100 object-fit-cover cursor-zoom-in" onclick="window.open(this.src, '_blank')">` : 
                                     `<div class="d-flex flex-column align-items-center justify-content-center h-100 opacity-50">
                                         <i class="bi bi-image fs-1"></i>
                                         <div class="extra-small">No photo uploaded</div>

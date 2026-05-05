@@ -254,6 +254,11 @@ class IncidentController extends Controller
             $incident->notes = $payload['remark'] ?? $payload['notes'] ?? ($payload['observation'] ?? 'No specific notes recorded.');
             $incident->priority = $payload['priority'] ?? 'Medium';
             
+            // Fallback for photo if forest_reports.photo is null but available in payload
+            if (!$incident->photo) {
+                $incident->photo = $payload['photo_evidence'] ?? ($payload['photo'] ?? null);
+            }
+            
             return response()->json([
                 'incident' => $incident,
                 'comments' => [] // forest_reports might not have comments yet
