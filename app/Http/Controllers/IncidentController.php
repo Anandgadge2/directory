@@ -32,14 +32,20 @@ class IncidentController extends Controller
                 $join->on('site_assign.user_id', '=', 'users.id')
                     ->where('site_assign.company_id', '=', $companyId);
             })
-            ->whereIn('patrol_logs.type', [
-                'animal_sighting',
-                'water_source',
-                'human_impact',
-                'animal_mortality',
-                'fire',
-                'Fire'
-            ])
+            ->where(function ($q) {
+                $q->whereIn('patrol_logs.type', [
+                    'animal_sighting',
+                    'water_source',
+                    'human_impact',
+                    'animal_mortality',
+                    'fire',
+                    'Fire'
+                ])
+                ->orWhere('patrol_logs.type', 'like', 'bird%')
+                ->orWhere('patrol_logs.type', 'like', 'butterfly%')
+                ->orWhere('patrol_logs.type', 'like', 'insect%')
+                ->orWhere('patrol_logs.type', 'like', 'fire%');
+            })
             ->where('patrol_sessions.company_id', $companyId)
             ->whereIn('patrol_sessions.user_id', $accessibleUserIds); // ✅ Role-based filter
 
@@ -72,6 +78,10 @@ class IncidentController extends Controller
                   ->orWhere('patrol_logs.type', 'water_sources');
             })->count(),
             'mortality' => (clone $base)->where('patrol_logs.type', 'like', 'animal_mortality%')->count(),
+            'fire' => (clone $base)->where('patrol_logs.type', 'like', 'fire%')->count(),
+            'birds' => (clone $base)->where('patrol_logs.type', 'like', 'bird%')->count(),
+            'butterflies' => (clone $base)->where('patrol_logs.type', 'like', 'butterfly%')->count(),
+            'insects' => (clone $base)->where('patrol_logs.type', 'like', 'insect%')->count(),
         ];
 
         /* 2. Charts Data */
@@ -142,14 +152,20 @@ class IncidentController extends Controller
             ->leftJoin('users', 'users.id', '=', 'patrol_sessions.user_id')
             ->leftJoin('site_details', 'site_details.id', '=', 'patrol_sessions.site_id')
             ->leftJoin('client_details', 'client_details.id', '=', 'site_details.client_id')
-            ->whereIn('patrol_logs.type', [
-                'animal_sighting',
-                'water_source',
-                'human_impact',
-                'animal_mortality',
-                'fire',
-                'Fire'
-            ])
+            ->where(function ($q) {
+                $q->whereIn('patrol_logs.type', [
+                    'animal_sighting',
+                    'water_source',
+                    'human_impact',
+                    'animal_mortality',
+                    'fire',
+                    'Fire'
+                ])
+                ->orWhere('patrol_logs.type', 'like', 'bird%')
+                ->orWhere('patrol_logs.type', 'like', 'butterfly%')
+                ->orWhere('patrol_logs.type', 'like', 'insect%')
+                ->orWhere('patrol_logs.type', 'like', 'fire%');
+            })
             ->where('patrol_sessions.company_id', $companyId)
             ->whereIn('patrol_sessions.user_id', $accessibleUserIds) // ✅ Role-based filter
             ->whereNotNull('patrol_logs.lat')
@@ -359,14 +375,20 @@ class IncidentController extends Controller
                       ->orWhere('patrol_logs.type', 'like', rtrim($cleanType, 's'));
                 });
             } else {
-                $query->whereIn('patrol_logs.type', [
-                    'animal_sighting',
-                    'water_source',
-                    'human_impact',
-                    'animal_mortality',
-                    'fire',
-                    'Fire'
-                ]);
+                $query->where(function($q) {
+                    $q->whereIn('patrol_logs.type', [
+                        'animal_sighting',
+                        'water_source',
+                        'human_impact',
+                        'animal_mortality',
+                        'fire',
+                        'Fire'
+                    ])
+                    ->orWhere('patrol_logs.type', 'like', 'bird%')
+                    ->orWhere('patrol_logs.type', 'like', 'butterfly%')
+                    ->orWhere('patrol_logs.type', 'like', 'insect%')
+                    ->orWhere('patrol_logs.type', 'like', 'fire%');
+                });
             }
 
             if ($request->filled('site_name')) {
@@ -503,14 +525,20 @@ class IncidentController extends Controller
                 });
             } else {
                 // For 'all' or 'total_incidents', show only the standard categories to match KPIs
-                $logQuery->whereIn('patrol_logs.type', [
-                    'animal_sighting',
-                    'water_source',
-                    'human_impact',
-                    'animal_mortality',
-                    'fire',
-                    'Fire'
-                ]);
+                $logQuery->where(function($q) {
+                    $q->whereIn('patrol_logs.type', [
+                        'animal_sighting',
+                        'water_source',
+                        'human_impact',
+                        'animal_mortality',
+                        'fire',
+                        'Fire'
+                    ])
+                    ->orWhere('patrol_logs.type', 'like', 'bird%')
+                    ->orWhere('patrol_logs.type', 'like', 'butterfly%')
+                    ->orWhere('patrol_logs.type', 'like', 'insect%')
+                    ->orWhere('patrol_logs.type', 'like', 'fire%');
+                });
             }
 
             $this->applyCanonicalFilters($logQuery, 'patrol_logs.created_at', 'patrol_sessions.site_id', 'patrol_sessions.user_id');

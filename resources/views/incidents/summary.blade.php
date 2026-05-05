@@ -28,7 +28,11 @@
             ['animal_sighting', 'Animal Sightings', $kpis['animal_sightings'], 'bi-eye-fill', 'text-success', 'rgba(25, 135, 84, 0.1)'],
             ['human_impact', 'Human Impact', $kpis['human_impact'], 'bi-people-fill', 'text-warning', 'rgba(255, 193, 7, 0.1)'],
             ['water_source', 'Water Sources', $kpis['water_sources'], 'bi-droplet-fill', 'text-info', 'rgba(13, 202, 240, 0.1)'],
-            ['animal_mortality', 'Mortality', $kpis['mortality'], 'bi-heartbreak-fill', 'text-secondary', 'rgba(108, 117, 125, 0.1)']
+            ['animal_mortality', 'Mortality', $kpis['mortality'], 'bi-heartbreak-fill', 'text-secondary', 'rgba(108, 117, 125, 0.1)'],
+            ['fire', 'Fire Incidents', $kpis['fire'], 'bi-fire', 'text-danger', 'rgba(220, 53, 69, 0.12)'],
+            ['bird', 'Bird Sightings', $kpis['birds'], 'bi-feather', 'text-primary', 'rgba(13, 110, 253, 0.1)'],
+            ['butterfly', 'Butterfly Sightings', $kpis['butterflies'], 'bi-flower1', 'text-success', 'rgba(25, 135, 84, 0.1)'],
+            ['insect', 'Insect Sightings', $kpis['insects'], 'bi-bug', 'text-warning', 'rgba(255, 193, 7, 0.14)']
         ];
     @endphp
     @foreach($kpiItems as $item)
