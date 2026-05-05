@@ -51,9 +51,9 @@ trait FilterDataTrait
      */
     protected function applyCanonicalFilters(
         $query,
-        string $dateColumn = null,
-        string $siteColumn = 'site_id',
-        string $userColumn = 'user_id',
+        ?string $dateColumn = null,
+        ?string $siteColumn = 'site_id',
+        ?string $userColumn = 'user_id',
         bool $skipDateFilter = false,
         bool $strictMode = false,
         bool $defaultTo30Days = true,
@@ -79,14 +79,16 @@ trait FilterDataTrait
         }
 
         // 2. Site filter (Range/Beat OR Role-based mapping)
-        $siteIds = $this->resolveSiteIds();
+        if ($siteColumn) {
+            $siteIds = $this->resolveSiteIds();
 
-        if (empty($siteIds)) {
-            if ($strictMode) {
-                $query->whereRaw('1 = 0');
+            if (empty($siteIds)) {
+                if ($strictMode) {
+                    $query->whereRaw('1 = 0');
+                }
+            } else {
+                $query->whereIn($siteColumn, $siteIds);
             }
-        } else {
-            $query->whereIn($siteColumn, $siteIds);
         }
 
         // 3. User / Guard Filter

@@ -129,7 +129,24 @@
                 });
             }
 
-            // 3. Close sidebar when clicking backdrop (Mobile)
+            // 3. Hover to Expand (Desktop only)
+            if (sidebar && window.innerWidth > 991) {
+                sidebar.addEventListener('mouseenter', function() {
+                    if (sidebar.classList.contains('collapsed')) {
+                        sidebar.classList.remove('collapsed');
+                        sidebar.classList.add('hover-expanded');
+                    }
+                });
+
+                sidebar.addEventListener('mouseleave', function() {
+                    if (sidebar.classList.contains('hover-expanded')) {
+                        sidebar.classList.add('collapsed');
+                        sidebar.classList.remove('hover-expanded');
+                    }
+                });
+            }
+
+            // 4. Close sidebar when clicking backdrop (Mobile)
             if (backdrop) {
                 backdrop.addEventListener('click', function () {
                     sidebar.classList.remove('mobile-show');
@@ -137,7 +154,7 @@
                 });
             }
 
-            // 4. Scroll Position Persistence
+            // 5. Scroll Position Persistence
             const savedPos = localStorage.getItem('sidebarScrollPos');
             if (savedPos && sidebar) {
                 sidebar.scrollTop = savedPos;

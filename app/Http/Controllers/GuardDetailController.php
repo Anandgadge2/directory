@@ -119,91 +119,39 @@ class GuardDetailController extends Controller
                 : 0;
  
             /* ================= INCIDENTS ================= */
-            $incidentsBase = DB::table('incidence_details');
- 
-            $this->applyCanonicalFilters(
-                $incidentsBase,
-                'incidence_details.dateFormat',
-                'incidence_details.site_id',
-                'incidence_details.guard_id',
-                false,
-                true
-            );
- 
-            $incidentsBase->where('incidence_details.company_id', $companyId)
-                ->where('incidence_details.guard_id', $guardId)
-                ->whereNotNull('incidence_details.type')
-                ->whereNotIn('incidence_details.type', ['Other', 'other', '']);
- 
-            $totalIncidents = (clone $incidentsBase)->count();
- 
-            if ($totalIncidents === 0) {
-                $logQuery = DB::table('patrol_logs')
-                    ->join('patrol_sessions', 'patrol_sessions.id', '=', 'patrol_logs.patrol_session_id')
-                    ->where('patrol_sessions.user_id', $guardId)
-                    ->where('patrol_sessions.company_id', $companyId)
-                    ->whereIn('patrol_logs.type', [
-                        'animal_sighting',
-                        'water_source',
-                        'human_impact',
-                        'animal_mortality'
-                    ])
-                    ->whereBetween('patrol_logs.created_at', [
-                        Carbon::parse($startDate)->startOfDay(),
-                        Carbon::parse($endDate)->endOfDay()
-                    ]);
- 
-                $siteIds = $this->resolveSiteIds();
-                if (!empty($siteIds)) {
-                    $logQuery->whereIn('patrol_sessions.site_id', $siteIds);
-                } else {
-                    $logQuery->whereRaw('1 = 0');
-                }
- 
-                $totalIncidents = (clone $logQuery)->count();
- 
-                $incidents = $logQuery->orderByDesc('patrol_logs.created_at')
-                    ->limit(10)
-                    ->select([
-                        'patrol_logs.id',
-                        'patrol_logs.type',
-                        'patrol_logs.created_at as date',
-                        'patrol_sessions.site_id',
-                        'patrol_logs.notes as remark'
-                    ])
-                    ->get()
-                    ->map(function ($i) {
-                        $site = DB::table('site_details')->where('id', $i->site_id)->first();
-                        return [
-                            'id'        => $i->id,
-                            'type'      => ucwords(str_replace('_', ' ', $i->type)),
-                            'priority'  => 'Normal',
-                            'status'    => 'Logged',
-                            'site_name' => $site->name ?? 'NA',
-                            'remark'    => $i->remark,
-                            'date'      => Carbon::parse($i->date)->format('Y-m-d'),
-                            'time'      => Carbon::parse($i->date)->format('H:i:s'),
-                        ];
-                    });
-            } else {
-                $incidents = (clone $incidentsBase)
-                    ->select('incidence_details.*')
-                    ->orderByDesc('dateFormat')
-                    ->limit(10)
-                    ->get()
-                    ->map(function ($i) {
-                        return [
-                            'id'        => $i->id,
-                            'type'      => $i->type,
-                            'priority'  => $i->priority,
-                            'status'    => $i->status,
-                            'site_name' => $i->site_name,
-                            'remark'    => $i->remark,
-                            'date'      => $i->date,
-                            'time'      => $i->time,
-                        ];
-                    });
-            }
+            $incidentsQuery = DB::table('forest_reports')
+                ->where('forest_reports.company_id', $companyId)
+                ->where('forest_reports.user_id', $guardId)
+                ->whereBetween('forest_reports.created_at', [
+                    Carbon::parse($startDate)->startOfDay(),
+                    Carbon::parse($endDate)->endOfDay()
+                ]);
+
+            $totalIncidents = (clone $incidentsQuery)->count();
+
+            $incidents = $incidentsQuery->orderByDesc('forest_reports.created_at')
+                ->limit(10)
+                ->select([
+                    'forest_reports.id',
+                    'forest_reports.report_type as type',
+                    'forest_reports.created_at as date',
+                    'forest_reports.range as site_name',
+                    'forest_reports.report_data'
+                ])
+                ->get()
+                ->map(function ($i) {
+                    $payload = json_decode($i->report_data, true);
+                    return [
+                        'id'        => $i->id,
+                        'type'      => ucwords(str_replace(['_', 'sighting', 'status'], [' ', 'Sighting', 'Status'], $i->type)),
+                        'priority'  => $payload['priority'] ?? 'Normal',
+                        'status'    => $payload['status'] ?? 'Logged',
+                        'site_name' => $i->site_name ?? 'NA',
+                        'remark'    => $payload['remark'] ?? ($payload['notes'] ?? 'No notes'),
+                        'date'      => Carbon::parse($i->date)->format('Y-m-d'),
+                        'time'      => Carbon::parse($i->date)->format('H:i:s'),
+                    ];
+                });
  
             /* ================= PATROL PATHS ================= */
             $patrolSessionsBase = DB::table('patrol_sessions')

@@ -21,38 +21,17 @@ class IncidentController extends Controller
         // ✅ Get accessible users based on role
         $accessibleUserIds = RoleBasedFilterService::getAccessibleUserIds();
 
-        // Base Query - CLEAN - No Geofences to prevent duplication
-        // Captures: Logs, Session, User (Guard), Site (Beat), Client (Range)
-        $base = DB::table('patrol_logs')
-            ->join('patrol_sessions', 'patrol_sessions.id', '=', 'patrol_logs.patrol_session_id')
-            ->leftJoin('users', 'users.id', '=', 'patrol_sessions.user_id')
-            ->leftJoin('site_details', 'site_details.id', '=', 'patrol_sessions.site_id')
-            ->leftJoin('client_details', 'client_details.id', '=', 'site_details.client_id')
-            ->leftJoin('site_assign', function ($join) use ($companyId) {
-                $join->on('site_assign.user_id', '=', 'users.id')
-                    ->where('site_assign.company_id', '=', $companyId);
-            })
-            ->where(function ($q) {
-                $q->whereIn('patrol_logs.type', [
-                    'animal_sighting',
-                    'water_source',
-                    'human_impact',
-                    'animal_mortality',
-                    'fire',
-                    'Fire'
-                ])
-                ->orWhere('patrol_logs.type', 'like', 'bird%')
-                ->orWhere('patrol_logs.type', 'like', 'butterfly%')
-                ->orWhere('patrol_logs.type', 'like', 'insect%')
-                ->orWhere('patrol_logs.type', 'like', 'fire%');
-            })
-            ->where('patrol_sessions.company_id', $companyId)
-            ->whereIn('patrol_sessions.user_id', $accessibleUserIds); // ✅ Role-based filter
+        // Base Query - Using forest_reports as primary source
+        $base = DB::table('forest_reports')
+            ->leftJoin('patrol_sessions', 'patrol_sessions.id', '=', 'forest_reports.patrol_id')
+            ->leftJoin('users', 'users.id', '=', 'forest_reports.user_id')
+            ->where('forest_reports.company_id', $companyId)
+            ->whereIn('forest_reports.user_id', $accessibleUserIds);
 
-        $this->applyCanonicalFilters($base, 'patrol_logs.created_at', 'patrol_sessions.site_id', 'patrol_sessions.user_id');
+        $this->applyCanonicalFilters($base, 'forest_reports.created_at', null, 'forest_reports.user_id');
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $base->whereBetween('patrol_logs.created_at', [
+            $base->whereBetween('forest_reports.created_at', [
                 $request->start_date . ' 00:00:00',
                 $request->end_date . ' 23:59:59'
             ]);
@@ -63,31 +42,33 @@ class IncidentController extends Controller
             $base->where('users.name', 'like', '%' . $request->guard_search . '%');
         }
 
-        /* 1. KPIs - Match inclusive logic from drill-downs */
+        /* 1. KPIs - Derived from forest_reports */
         $kpis = [
             'total_incidents' => (clone $base)->count(),
-            'animal_sightings' => (clone $base)->where(function($q) {
-                $q->where('patrol_logs.type', 'animal_sighting')
-                  ->orWhere('patrol_logs.type', 'Animal Sighting')
-                  ->orWhere('patrol_logs.type', 'animal_sightings');
-            })->count(),
-            'human_impact' => (clone $base)->where('patrol_logs.type', 'like', 'human_impact%')->count(),
-            'water_sources' => (clone $base)->where(function($q) {
-                $q->where('patrol_logs.type', 'water_source')
-                  ->orWhere('patrol_logs.type', 'Water Source')
-                  ->orWhere('patrol_logs.type', 'water_sources');
-            })->count(),
-            'mortality' => (clone $base)->where('patrol_logs.type', 'like', 'animal_mortality%')->count(),
-            'fire' => (clone $base)->where('patrol_logs.type', 'like', 'fire%')->count(),
-            'birds' => (clone $base)->where('patrol_logs.type', 'like', 'bird%')->count(),
-            'butterflies' => (clone $base)->where('patrol_logs.type', 'like', 'butterfly%')->count(),
-            'insects' => (clone $base)->where('patrol_logs.type', 'like', 'insect%')->count(),
+            'animal_sightings' => (clone $base)->where('forest_reports.report_type', 'sighting')->count(),
+            'water_sources' => (clone $base)->where('forest_reports.report_type', 'water_status')->count(),
+            'fire' => (clone $base)->where('forest_reports.report_type', 'fire')->count(),
+            'birds' => (clone $base)->whereIn('forest_reports.report_type', ['bird_sighting', 'bird'])->count(),
+            'insects_butterflies' => (clone $base)->whereIn('forest_reports.report_type', ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'])->count(),
         ];
 
         /* 2. Charts Data */
+        $typeCase = '
+            CASE 
+                WHEN forest_reports.report_type = "sighting" THEN "Animal Sighting"
+                WHEN forest_reports.report_type = "water_status" THEN "Water Source"
+                WHEN forest_reports.report_type = "fire" THEN "Fire"
+                WHEN forest_reports.report_type IN ("bird_sighting", "bird") THEN "Birds"
+                WHEN forest_reports.report_type IN ("butterfly_sighting", "insect_sighting", "insect_butterfly") THEN "Insect/Butterfly"
+            END';
+
         $typeStats = (clone $base)
-            ->selectRaw('patrol_logs.type, COUNT(*) as total')
-            ->groupBy('patrol_logs.type')
+            ->whereIn('forest_reports.report_type', [
+                'sighting', 'water_status', 'fire', 'bird_sighting', 'bird', 
+                'butterfly_sighting', 'insect_sighting', 'insect_butterfly'
+            ])
+            ->selectRaw($typeCase . ' as type, COUNT(*) as total')
+            ->groupBy(DB::raw($typeCase))
             ->get();
 
         $sessionStats = (clone $base)
@@ -95,34 +76,35 @@ class IncidentController extends Controller
             ->groupBy('patrol_sessions.session')
             ->get();
 
-        /* 5. Detailed Incidents List (Clean Distinct List) */
-        $incidents = (clone $base)
+        /* 5. Detailed Incidents List */
+        $incidentsQuery = (clone $base)
             ->selectRaw('
-                patrol_logs.id,
-                patrol_logs.type,
-                patrol_logs.payload,
-                patrol_logs.notes,
-                patrol_logs.created_at,
+                forest_reports.id,
+                forest_reports.report_type as type,
+                forest_reports.report_data as payload,
+                forest_reports.created_at,
                 users.id as guard_id,
                 users.name as guard,
-                COALESCE(site_assign.client_id, site_details.client_id) as range_id,
-                COALESCE(site_assign.client_name, client_details.name) as range_name,
-                COALESCE(patrol_sessions.site_id, NULL) as beat_id,
-                COALESCE(site_assign.site_name, site_details.name) as beat_name,
-                COALESCE(site_assign.site_name, site_details.name) as compartment, 
+                forest_reports.range as range_name,
+                forest_reports.beat as beat_name,
                 patrol_sessions.session,
                 CASE
-                    WHEN patrol_logs.type = "animal_mortality" THEN 5
-                    WHEN patrol_logs.type = "human_impact" THEN 4
-                    WHEN patrol_logs.type = "animal_sighting" THEN 3
-                    WHEN patrol_logs.type = "water_source" THEN 2
+                    WHEN forest_reports.report_type = "mortality" THEN 5
+                    WHEN forest_reports.report_type IN ("felling", "encroachment", "poaching") THEN 4
+                    WHEN forest_reports.report_type = "sighting" THEN 3
+                    WHEN forest_reports.report_type = "water_status" THEN 2
                     ELSE 1
                 END as severity
             ')
-            ->orderByDesc('patrol_logs.created_at')
-            ->orderByDesc('patrol_logs.id')
-            ->paginate(25)
-            ->withQueryString();
+            ->orderByDesc('forest_reports.created_at')
+            ->orderByDesc('forest_reports.id');
+
+        if ($request->ajax()) {
+            $incidents = $incidentsQuery->paginate(25);
+            return view('incidents.partials.incident-table', compact('incidents'))->render();
+        }
+
+        $incidents = $incidentsQuery->paginate(25)->withQueryString();
 
         return view('incidents.summary', array_merge(
             $this->filterData(),
@@ -231,7 +213,54 @@ class IncidentController extends Controller
         }
         $seenIds[] = $id;
 
-        // 1. Try finding in patrol_logs first
+        // 1. Try finding in forest_reports first (The new primary source)
+        $incident = DB::table('forest_reports')
+            ->leftJoin('patrol_sessions', 'patrol_sessions.id', '=', 'forest_reports.patrol_id')
+            ->leftJoin('users', 'users.id', '=', 'forest_reports.user_id')
+            ->where('forest_reports.id', $id)
+            ->select(
+                'forest_reports.id',
+                'forest_reports.report_type as type',
+                'forest_reports.report_data',
+                'forest_reports.photo',
+                'forest_reports.latitude as lat',
+                'forest_reports.longitude as lng',
+                'forest_reports.created_at',
+                'forest_reports.beat as beat_name',
+                'forest_reports.range as range_name',
+                'forest_reports.status',
+                'users.name as guard_name',
+                'users.contact as guard_contact',
+                'patrol_sessions.session'
+            )
+            ->first();
+
+        if ($incident) {
+            // Map string status to numeric flag for frontend compatibility
+            $statusMapping = [
+                'Pending' => 0,
+                'Resolved' => 1,
+                'Ignored' => 2,
+                'Escalated' => 3,
+                'Critical' => 5,
+                'Reverted' => 6
+            ];
+            $incident->statusFlag = $statusMapping[$incident->status] ?? 0;
+
+            // Parse report_data (JSON) into notes/remark if available
+            $payload = json_decode($incident->report_data, true);
+            if (!is_array($payload)) { $payload = []; }
+            
+            $incident->notes = $payload['remark'] ?? $payload['notes'] ?? ($payload['observation'] ?? 'No specific notes recorded.');
+            $incident->priority = $payload['priority'] ?? 'Medium';
+            
+            return response()->json([
+                'incident' => $incident,
+                'comments' => [] // forest_reports might not have comments yet
+            ]);
+        }
+
+        // 2. Fallback to patrol_logs (for legacy data)
         $incident = DB::table('patrol_logs')
             ->leftJoin('patrol_sessions', 'patrol_sessions.id', '=', 'patrol_logs.patrol_session_id')
             ->leftJoin('users', 'users.id', '=', 'patrol_sessions.user_id')
@@ -329,95 +358,75 @@ class IncidentController extends Controller
 
         // Use incidence_details as primary source ONLY if explicitly requested or for status filters
         // Summary page charts use patrol_logs, so we need to match that
-        if ($source === 'patrol_logs') {
-             $query = DB::table('patrol_logs')
-                ->join('patrol_sessions', 'patrol_sessions.id', '=', 'patrol_logs.patrol_session_id')
-                ->leftJoin('incidence_details', 'incidence_details.inc_id', '=', 'patrol_logs.id')
-                ->leftJoin('users', 'users.id', '=', 'patrol_sessions.user_id')
-                ->leftJoin('site_details', 'site_details.id', '=', 'patrol_sessions.site_id')
-                ->leftJoin('client_details', 'client_details.id', '=', 'site_details.client_id')
-                ->where('patrol_sessions.company_id', $companyId)
-                ->whereIn('patrol_sessions.user_id', $accessibleUserIds);
+        // Use forest_reports as primary source
+        if ($source === 'forest_reports' || $source === 'patrol_logs') {
+             $query = DB::table('forest_reports')
+                ->leftJoin('patrol_sessions', 'patrol_sessions.id', '=', 'forest_reports.patrol_id')
+                ->leftJoin('users', 'users.id', '=', 'forest_reports.user_id')
+                ->where('forest_reports.company_id', $companyId)
+                ->whereIn('forest_reports.user_id', $accessibleUserIds);
 
+            // Handle status filtering for forest_reports
             if ($request->has('fetchByStatus')) {
-                $statusMap = [
-                    'Resolved' => 1,
-                    'Pending' => 0,
-                    'Pending (Supervisor)' => 0,
-                    'Supervisor Pending' => 0,
-                    'Pending (Admin)' => 4,
-                    'Admin Pending' => 4,
-                    'Escalated (Admin)' => 3,
-                    'Escalated (Client)' => 5,
-                    'Ignored' => 2,
-                    'Reverted' => 6,
-                    'Escalated' => 3,
-                    'Critical' => 5
-                ];
-                $statusFlag = $statusMap[$type] ?? null;
-                
-                if ($statusFlag === 0) {
-                    $query->where(function($q) {
-                        $q->where('incidence_details.statusFlag', 0)
-                          ->orWhereNull('incidence_details.statusFlag');
-                    });
-                } else if ($statusFlag !== null) {
-                    $query->where('incidence_details.statusFlag', $statusFlag);
-                } else if (is_numeric($type)) {
-                    $query->where('incidence_details.statusFlag', $type);
-                }
+                $query->where('forest_reports.status', 'like', $type . '%');
             } else if ($type !== 'total_incidents' && $type !== 'all' && $type !== 'undefined') {
-                $cleanType = strtolower(trim($type));
-                $query->where(function($q) use ($cleanType, $type) {
-                    $q->where('patrol_logs.type', 'like', $type)
-                      ->orWhere('patrol_logs.type', 'like', $cleanType)
-                      ->orWhere('patrol_logs.type', 'like', str_replace(' ', '_', $cleanType))
-                      ->orWhere('patrol_logs.type', 'like', rtrim($cleanType, 's'));
-                });
-            } else {
-                $query->where(function($q) {
-                    $q->whereIn('patrol_logs.type', [
-                        'animal_sighting',
-                        'water_source',
-                        'human_impact',
-                        'animal_mortality',
-                        'fire',
-                        'Fire'
-                    ])
-                    ->orWhere('patrol_logs.type', 'like', 'bird%')
-                    ->orWhere('patrol_logs.type', 'like', 'butterfly%')
-                    ->orWhere('patrol_logs.type', 'like', 'insect%')
-                    ->orWhere('patrol_logs.type', 'like', 'fire%');
-                });
+                // Map frontend labels to DB report_type
+                $mappedType = match(strtolower($type)) {
+                    'animal sightings' => 'sighting',
+                    'animal sighting' => 'sighting',
+                    'human impact' => ['felling', 'encroachment', 'poaching', 'animal_damage'],
+                    'water sources' => 'water_status',
+                    'water source' => 'water_status',
+                    'mortality' => 'mortality',
+                    'animal mortality' => 'mortality',
+                    'fire' => 'fire',
+                    'birds' => ['bird_sighting', 'bird'],
+                    'bird' => ['bird_sighting', 'bird'],
+                    'butterflies' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
+                    'butterfly' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
+                    'insects' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
+                    'insect' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
+                    'insect/butterfly' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
+                    'insect_butterfly' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
+                    'insects_butterflies' => ['butterfly_sighting', 'insect_sighting', 'insect_butterfly'],
+                    default => $type
+                };
+
+                if (is_array($mappedType)) {
+                    $query->whereIn('forest_reports.report_type', $mappedType);
+                } else {
+                    $query->where('forest_reports.report_type', 'like', $mappedType . '%');
+                }
             }
 
-            if ($request->filled('site_name')) {
-                $query->where('site_details.name', 'like', $request->site_name . '%');
-            }
+            $this->applyCanonicalFilters($query, 'forest_reports.created_at', null, 'forest_reports.user_id');
 
-            $this->applyCanonicalFilters($query, 'patrol_logs.created_at', 'patrol_sessions.site_id', 'patrol_sessions.user_id');
-
-            // Explicitly apply the same date range format as the summary page for perfect matching
             if ($request->filled('start_date') && $request->filled('end_date')) {
-                $query->whereBetween('patrol_logs.created_at', [
+                $query->whereBetween('forest_reports.created_at', [
                     $request->start_date . ' 00:00:00',
                     $request->end_date . ' 23:59:59'
                 ]);
             }
             
             $incidents = $query->selectRaw('
-                patrol_logs.id,
-                patrol_logs.type,
-                patrol_logs.created_at,
+                forest_reports.id,
+                forest_reports.report_type as type,
+                forest_reports.created_at,
                 users.name as guard,
-                site_details.name as beat_name,
-                client_details.name as range_name,
-                COALESCE(incidence_details.statusFlag, 0) as statusFlag
+                forest_reports.beat as beat_name,
+                forest_reports.range as range_name,
+                CASE 
+                    WHEN forest_reports.status = "Resolved" THEN 1
+                    WHEN forest_reports.status = "Ignored" THEN 2
+                    WHEN forest_reports.status = "Escalated" THEN 3
+                    WHEN forest_reports.status = "Critical" THEN 5
+                    WHEN forest_reports.status = "Reverted" THEN 6
+                    ELSE 0 
+                END as statusFlag
             ')
-            ->orderByDesc('patrol_logs.created_at')
+            ->orderByDesc('forest_reports.created_at')
             ->limit(100)
-            ->get()
-            ->values(); // Ensure clean indexed array for JSON
+            ->get();
 
             return response()->json(['type' => $type, 'incidents' => $incidents]);
         }

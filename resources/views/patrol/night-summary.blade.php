@@ -119,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(r => r.text())
             .then(html => {
                 document.getElementById('nightTableContainer').innerHTML = html;
+                if (window.initTableSort) window.initTableSort();
             })
             .catch(e => console.error(e));
         }

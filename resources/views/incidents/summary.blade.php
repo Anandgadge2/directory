@@ -26,13 +26,10 @@
         $kpiItems = [
             ['total_incidents', 'Total Incidents', $kpis['total_incidents'], 'bi-exclamation-triangle-fill', 'text-danger', 'rgba(220, 53, 69, 0.1)'],
             ['animal_sighting', 'Animal Sightings', $kpis['animal_sightings'], 'bi-eye-fill', 'text-success', 'rgba(25, 135, 84, 0.1)'],
-            ['human_impact', 'Human Impact', $kpis['human_impact'], 'bi-people-fill', 'text-warning', 'rgba(255, 193, 7, 0.1)'],
             ['water_source', 'Water Sources', $kpis['water_sources'], 'bi-droplet-fill', 'text-info', 'rgba(13, 202, 240, 0.1)'],
-            ['animal_mortality', 'Mortality', $kpis['mortality'], 'bi-heartbreak-fill', 'text-secondary', 'rgba(108, 117, 125, 0.1)'],
             ['fire', 'Fire Incidents', $kpis['fire'], 'bi-fire', 'text-danger', 'rgba(220, 53, 69, 0.12)'],
-            ['bird', 'Bird Sightings', $kpis['birds'], 'bi-feather', 'text-primary', 'rgba(13, 110, 253, 0.1)'],
-            ['butterfly', 'Butterfly Sightings', $kpis['butterflies'], 'bi-flower1', 'text-success', 'rgba(25, 135, 84, 0.1)'],
-            ['insect', 'Insect Sightings', $kpis['insects'], 'bi-bug', 'text-warning', 'rgba(255, 193, 7, 0.14)']
+            ['birds', 'Bird Sightings', $kpis['birds'], 'bi-feather', 'text-primary', 'rgba(13, 110, 253, 0.1)'],
+            ['insect_butterfly', 'Insect/Butterfly', $kpis['insects_butterflies'], 'bi-bug', 'text-warning', 'rgba(255, 193, 7, 0.14)']
         ];
     @endphp
     @foreach($kpiItems as $item)
@@ -54,67 +51,8 @@
     @endforeach
 </div>
 
-{{-- ================= DETAILED INCIDENTS TABLE (Explorer) ================= --}}
-<div class="card mb-4 border-0 shadow-sm">
-    <div class="card-header bg-white border-bottom fw-bold py-3">
-        <i class="bi bi-list-ul me-2"></i> All Incidents
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-            <table class="table table-hover align-middle mb-0 sortable-table sticky-header">
-                <thead class="table-light sticky-top">
-                <tr>
-                    <th style="background: #f8f9fa;">Sr.No</th>
-                    <th data-sortable>Type</th>
-                    <th data-sortable data-type="number" class="text-center">Severity</th>
-                    <th data-sortable>Forest Guard</th>
-                    <th data-sortable>Range</th>
-                    <th data-sortable>Beat</th>
-                    <!-- <th data-sortable>Compartment</th> -->
-                    <th data-sortable>Session</th>
-                    <th data-sortable class="text-center" style="min-width: 140px;">Date</th>
-                </tr>
-                </thead>
-                <tbody>
-                @if(isset($incidents) && count($incidents) > 0)
-                    @foreach($incidents as $i)
-                        <tr onclick="if(!event.target.closest('.guard-name-link')) openIncidentDetail({{ $i->id }})" style="cursor:pointer">
-                            <td class="text-center" style="background: #fff;">{{ $loop->iteration + ($incidents->currentPage() - 1) * $incidents->perPage() }}</td>
-                            <td><span class="badge bg-secondary">{{ ucwords(str_replace('_', ' ', $i->type)) }}</span></td>
-                            <td class="text-center">
-                                <span class="badge bg-{{ severityBadge($i->severity) }}">
-                                    {{ $i->severity }}
-                                </span>
-                            </td>
-                            <td>
-                                @if(!empty($i->guard_id))
-                                    <a href="#" class="guard-name-link user-name text-decoration-none" data-guard-id="{{ $i->guard_id }}">
-                                        {{ \App\Helpers\FormatHelper::formatName($i->guard) }}
-                                    </a>
-                                @else
-                                    {{ $i->guard ?? '—' }}
-                                @endif
-                            </td>
-                            <td>{{ $i->range_name ?? $i->range_id ?? 'NA' }}</td>
-                            <td>{{ $i->beat_name ?? $i->beat_id ?? 'NA' }}</td>
-                            <!-- <td class="fw-semibold">{{ $i->compartment ?? '—' }}</td> -->
-                            <td>{{ $i->session ?? 'NA' }}</td>
-                            <td class="text-center">{{ \Carbon\Carbon::parse($i->created_at)->format('d M Y') }}<br><small class="text-muted">{{ \Carbon\Carbon::parse($i->created_at)->format('h:i A') }}</small></td>
-                        </tr>
-                    @endforeach
-                @else
-                    <tr>
-                        <td colspan="9" class="text-center text-muted py-4">No incidents found for the selected criteria</td>
-                    </tr>
-                @endif
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="p-3 d-flex justify-content-end border-top">
-            {{ $incidents->links('pagination::bootstrap-4') }}
-        </div>
-    </div>
+<div id="incidentTableContainer">
+    @include('incidents.partials.incident-table')
 </div>
 
 {{-- ================= CHARTS ROW ================= --}}
@@ -188,6 +126,21 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+/* ================= AJAX PAGINATION ================= */
+document.addEventListener('click', function(e) {
+    if(e.target.closest('#incidentTableContainer .pagination a')) {
+        e.preventDefault();
+        let url = e.target.closest('a').href;
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.text())
+        .then(html => {
+            document.getElementById('incidentTableContainer').innerHTML = html;
+            if (window.initTableSort) window.initTableSort();
+        })
+        .catch(e => console.error(e));
+    }
+});
+
 /* ================= MODAL JS ================= */
 async function openIncidentDetail(id) {
     const modalEl = document.getElementById('incidentModal');
@@ -334,7 +287,7 @@ async function showIncidentsByType(key, label, extraParams = {}) {
     modal.show();
 
     try {
-        let url = `/incidents/type/${key}?source=patrol_logs&`;
+        let url = `/incidents/type/${key}?source=forest_reports&`;
         Object.keys(extraParams).forEach(k => {
             url += `${k}=${encodeURIComponent(extraParams[k])}&`;
         });

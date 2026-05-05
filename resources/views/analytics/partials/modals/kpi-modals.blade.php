@@ -197,7 +197,7 @@
                         </div>
                     </div>
 
-                    <!-- Top Sites by Distance -->
+                    <!-- Top Sites by Distance
                     <div class="col-12">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-header bg-white py-3">
@@ -220,7 +220,7 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
             </div>
         </div>
@@ -495,7 +495,7 @@
                         </div>
                     </div>
 
-                    <!-- Column 3: Site Performance -->
+                    <!-- Column 3: Site Performance
                     <div class="col-md-12">
                         <div class="card border-0 shadow-sm">
                             <div class="card-header bg-white py-3 border-0">
@@ -520,7 +520,7 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
 
                 <div class="d-grid mt-4">

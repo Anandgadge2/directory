@@ -112,23 +112,23 @@
                                 <span class="fw-bold">{{ \App\Helpers\FormatHelper::formatName($p->user_name) }}</span>
                             @endif
                         </td>
-                        <td class="text-center">{{ $stats->total_sessions ?? '-' }}</td>
-                        <td class="text-center text-success patrol-hide-mobile">{{ $stats->completed ?? '-' }}</td>
-                        <td class="text-center text-warning patrol-hide-mobile">{{ $stats->ongoing ?? '-' }}</td>
+                        <td class="text-center" data-value="{{ $stats->total_sessions ?? 0 }}">{{ $stats->total_sessions ?? '-' }}</td>
+                        <td class="text-center text-success patrol-hide-mobile" data-value="{{ $stats->completed ?? 0 }}">{{ $stats->completed ?? '-' }}</td>
+                        <td class="text-center text-warning patrol-hide-mobile" data-value="{{ $stats->ongoing ?? 0 }}">{{ $stats->ongoing ?? '-' }}</td>
                         <td class="patrol-hide-mobile text-muted small">{{ $p->range ?? 'NA' }}</td>
                         <td class="small">{{ $p->beat ?? 'NA' }}</td>
-                        <td class="small">
+                        <td class="small" data-value="{{ $p->started_at }}">
                             {{ \Carbon\Carbon::parse($p->started_at)->format('d M, H:i') }}
                         </td>
-                        <td class="patrol-hide-mobile text-center">
+                        <td class="patrol-hide-mobile text-center" data-value="{{ $p->ended_at ? 1 : 0 }}">
                             @if($p->ended_at)
                                 <span class="badge bg-soft-success text-success extra-small">Comp.</span>
                             @else
                                 <span class="badge bg-soft-warning text-warning extra-small">Active</span>
                             @endif
                         </td>
-                        <td class="text-center fw-medium">{{ number_format($p->distance ?? 0, 1) }}</td>
-                        <td class="text-center patrol-hide-mobile">{{ number_format($p->speed ?? 0, 1) }}</td>
+                        <td class="text-center fw-medium" data-value="{{ $p->distance ?? 0 }}">{{ number_format($p->distance ?? 0, 1) }}</td>
+                        <td class="text-center patrol-hide-mobile" data-value="{{ $p->speed ?? 0 }}">{{ number_format($p->speed ?? 0, 1) }}</td>
                     </tr>
                 @empty
                     <tr>

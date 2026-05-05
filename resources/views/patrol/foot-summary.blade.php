@@ -138,6 +138,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterLoader = document.querySelector('.filter-loading');
     if (filterLoader) filterLoader.style.display = 'none';
 
+    /* AJAX Pagination */
+    document.addEventListener('click', function(e) {
+        if(e.target.closest('#patrolTableContainer .pagination a')) {
+            e.preventDefault();
+            let url = e.target.closest('a').href;
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.text())
+            .then(html => {
+                document.getElementById('patrolTableContainer').innerHTML = html;
+                if (window.initTableSort) window.initTableSort();
+            })
+            .catch(e => console.error(e));
+        }
+    });
+
     /* DISTANCE BY GUARD (Horizontal Scrollable) */
     const guardData = {!! json_encode($guardStats) !!}; // Use data from controller directly
     

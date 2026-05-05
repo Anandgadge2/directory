@@ -59,32 +59,32 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 custom-report-table">
-                        <thead class="bg-light">
+                    <table class="table table-hover align-middle mb-0 custom-report-table sortable-table">
+                        <thead class="bg-light sticky-top">
                             @if($reportType == 'attendance')
                                 <tr>
-                                    <th class="ps-4">Rank</th>
-                                    <th class="text-start">Forest Guard Name</th>
-                                    <th>Days Active</th>
-                                    <th>Late Marks</th>
-                                    <th>Absents</th>
-                                    <th class="pe-4">Compliance</th>
+                                    <th class="ps-4" data-sortable data-type="number">Rank</th>
+                                    <th class="text-start" data-sortable>Forest Guard Name</th>
+                                    <th data-sortable>Days Active</th>
+                                    <th data-sortable data-type="number">Late Marks</th>
+                                    <th data-sortable data-type="number">Absents</th>
+                                    <th class="pe-4" data-sortable data-type="number">Compliance</th>
                                 </tr>
                             @elseif($reportType == 'patrol' || $reportType == 'night_patrol')
                                 <tr>
-                                    <th class="ps-4">Forest Guard Name</th>
-                                    <th>Total Sessions</th>
-                                    <th>Distance covered</th>
-                                    <th>Avg Speed</th>
-                                    <th class="pe-4">Total Vigilance Time</th>
+                                    <th class="ps-4" data-sortable>Forest Guard Name</th>
+                                    <th data-sortable data-type="number">Total Sessions</th>
+                                    <th data-sortable data-type="number">Distance covered</th>
+                                    <th data-sortable data-type="number">Avg Speed</th>
+                                    <th class="pe-4" data-sortable data-type="number">Total Vigilance Time</th>
                                 </tr>
                             @elseif($reportType == 'incident')
                                 <tr>
-                                    <th class="ps-4">Date & Time</th>
-                                    <th>Forest Guard</th>
-                                    <th>Incident Type</th>
-                                    <th>Location</th>
-                                    <th class="pe-4">Observation Notes</th>
+                                    <th class="ps-4" data-sortable>Date & Time</th>
+                                    <th data-sortable>Forest Guard</th>
+                                    <th data-sortable>Incident Type</th>
+                                    <th data-sortable>Location</th>
+                                    <th class="pe-4" data-sortable>Observation Notes</th>
                                 </tr>
                             @endif
                         </thead>
@@ -148,26 +148,26 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 custom-report-table">
-                        <thead class="bg-light">
+                    <table class="table table-hover align-middle mb-0 custom-report-table sortable-table">
+                        <thead class="bg-light sticky-top">
                             <tr>
-                                <th class="ps-4">Date & Time</th>
-                                <th class="text-start">Forest Guard</th>
-                                <th>Location (Beat)</th>
+                                <th class="ps-4" data-sortable>Date & Time</th>
+                                <th class="text-start" data-sortable>Forest Guard</th>
+                                <th data-sortable>Location (Beat)</th>
                                 @if($reportType == 'attendance')
-                                    <th>Status</th>
-                                    <th>Location</th>
-                                    <th>Punch In</th>
-                                    <th>Punch Out</th>
-                                    <th class="pe-4">Late Mins</th>
+                                    <th data-sortable>Status</th>
+                                    <th data-sortable>Location</th>
+                                    <th data-sortable>Punch In</th>
+                                    <th data-sortable>Punch Out</th>
+                                    <th class="pe-4" data-sortable data-type="number">Late Mins</th>
                                 @elseif($reportType == 'incident')
-                                    <th>Incident Type</th>
-                                    <th class="pe-4">Observation Notes</th>
+                                    <th data-sortable>Incident Type</th>
+                                    <th class="pe-4" data-sortable>Observation Notes</th>
                                 @else
-                                    <th>Mode</th>
-                                    <th>Distance</th>
-                                    <th>Duration</th>
-                                    <th class="pe-4">Avg Speed</th>
+                                    <th data-sortable>Mode</th>
+                                    <th data-sortable data-type="number">Distance</th>
+                                    <th data-sortable>Duration</th>
+                                    <th class="pe-4" data-sortable data-type="number">Avg Speed</th>
                                 @endif
                             </tr>
                         </thead>

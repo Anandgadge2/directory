@@ -639,13 +639,25 @@ class PatrolController extends Controller
             )
             ->get();
 
-        $patrolLogs = DB::table('patrol_logs')
-            ->join('patrol_sessions', 'patrol_sessions.id', '=', 'patrol_logs.patrol_session_id')
-            ->where('patrol_sessions.user_id', $userId)
-            ->where('patrol_sessions.company_id', $companyId)
-            ->orderBy('patrol_logs.created_at', 'desc')
+        $patrolLogs = DB::table('forest_reports')
+            ->where('forest_reports.user_id', $userId)
+            ->where('forest_reports.company_id', $companyId)
+            ->orderBy('forest_reports.created_at', 'desc')
             ->limit(50)
-            ->get();
+            ->select([
+                'forest_reports.id',
+                'forest_reports.report_type as type',
+                'forest_reports.created_at',
+                'forest_reports.report_data',
+                'forest_reports.photo'
+            ])
+            ->get()
+            ->map(function($log) {
+                $payload = json_decode($log->report_data, true);
+                $log->notes = $payload['remark'] ?? ($payload['notes'] ?? 'No notes');
+                $log->type = ucwords(str_replace(['_', 'sighting', 'status'], [' ', 'Sighting', 'Status'], $log->type));
+                return $log;
+            });
 
         $stats = [
             'total_sessions' => (clone $base)->count(),

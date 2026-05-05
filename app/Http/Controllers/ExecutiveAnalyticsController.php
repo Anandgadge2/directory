@@ -477,32 +477,18 @@ class ExecutiveAnalyticsController extends Controller
                 ? round(($presentCount / $totalPossibleManDays) * 100, 1)
                 : 0;
 
-            // Incidents - Match IncidentController@summary logic for perfect synchronization
-            // Source of truth for incidents are patrol_logs with incident types
-            $incidentQuery = DB::table('patrol_logs')
-                ->join('patrol_sessions', 'patrol_sessions.id', '=', 'patrol_logs.patrol_session_id')
-                ->leftJoin('incidence_details', 'incidence_details.inc_id', '=', 'patrol_logs.id')
-                ->where('patrol_sessions.company_id', $companyId)
-                ->whereIn('patrol_sessions.user_id', $accessibleUserIds)
-                ->where(function ($q) {
-                    $q->where('patrol_logs.type', 'like', 'animal_sighting%')
-                        ->orWhere('patrol_logs.type', 'like', 'Animal Sighting%')
-                        ->orWhere('patrol_logs.type', 'like', 'water_source%')
-                        ->orWhere('patrol_logs.type', 'like', 'Water Source%')
-                        ->orWhere('patrol_logs.type', 'like', 'human_impact%')
-                        ->orWhere('patrol_logs.type', 'like', 'Human Impact%')
-                        ->orWhere('patrol_logs.type', 'like', 'animal_mortality%')
-                        ->orWhere('patrol_logs.type', 'like', 'Animal Mortality%')
-                        ->orWhere('patrol_logs.type', 'like', 'fire%')
-                        ->orWhere('patrol_logs.type', 'like', 'Fire%');
-                });
+            // Incidents - Standardized to forest_reports for perfect synchronization
+            $incidentQuery = DB::table('forest_reports')
+                ->leftJoin('patrol_sessions', 'patrol_sessions.id', '=', 'forest_reports.patrol_id')
+                ->where('forest_reports.company_id', $companyId)
+                ->whereIn('forest_reports.user_id', $accessibleUserIds);
 
-            // Apply canonical filters using passed dates for strict consistency
+            // Apply canonical filters using forest_reports.created_at
             $this->applyCanonicalFilters(
                 $incidentQuery,
-                'patrol_logs.created_at',
-                'patrol_sessions.site_id',
-                'patrol_sessions.user_id',
+                'forest_reports.created_at',
+                null, // forest_reports doesn't have site_id directly, but we can filter by user
+                'forest_reports.user_id',
                 false,
                 false,
                 true,
@@ -510,17 +496,12 @@ class ExecutiveAnalyticsController extends Controller
                 $endDate
             );
 
-            Log::debug('Incident Query', [
-                'sql' => $incidentQuery->toSql(),
-                'bindings' => $incidentQuery->getBindings()
-            ]);
-
             // Combined aggregation for Incidents
             $incidentsStats = (clone $incidentQuery)
                 ->selectRaw('
                     COUNT(*) as total,
-                    SUM(CASE WHEN incidence_details.statusFlag = 1 THEN 1 ELSE 0 END) as resolved,
-                    SUM(CASE WHEN (incidence_details.statusFlag IN (0, 3, 4, 5, 6) OR incidence_details.statusFlag IS NULL) THEN 1 ELSE 0 END) as pending
+                    SUM(CASE WHEN forest_reports.status = "Resolved" THEN 1 ELSE 0 END) as resolved,
+                    SUM(CASE WHEN forest_reports.status != "Resolved" OR forest_reports.status IS NULL THEN 1 ELSE 0 END) as pending
                 ')
                 ->first();
 
@@ -679,32 +660,18 @@ class ExecutiveAnalyticsController extends Controller
 
         $accessibleUserIds = RoleBasedFilterService::getAccessibleUserIds();
 
-        // Use 'incidence_details' joined with 'patrol_logs' to catch all reported incidents
-        // This ensures the counts match the Incident Summary report perfectly
-        $base = DB::table('patrol_logs')
-            ->join('patrol_sessions', 'patrol_sessions.id', '=', 'patrol_logs.patrol_session_id')
-            ->leftJoin('incidence_details', 'incidence_details.inc_id', '=', 'patrol_logs.id')
-            ->leftJoin('users', 'patrol_sessions.user_id', '=', 'users.id')
-            ->where('patrol_sessions.company_id', $companyId)
-            ->whereIn('patrol_sessions.user_id', $accessibleUserIds)
-            ->where(function ($q) {
-                $q->where('patrol_logs.type', 'like', 'animal_sighting%')
-                    ->orWhere('patrol_logs.type', 'like', 'Animal Sighting%')
-                    ->orWhere('patrol_logs.type', 'like', 'water_source%')
-                    ->orWhere('patrol_logs.type', 'like', 'Water Source%')
-                    ->orWhere('patrol_logs.type', 'like', 'human_impact%')
-                    ->orWhere('patrol_logs.type', 'like', 'Human Impact%')
-                    ->orWhere('patrol_logs.type', 'like', 'animal_mortality%')
-                    ->orWhere('patrol_logs.type', 'like', 'Animal Mortality%')
-                    ->orWhere('patrol_logs.type', 'like', 'fire%')
-                    ->orWhere('patrol_logs.type', 'like', 'Fire%');
-            });
+        // Use forest_reports as primary source
+        $base = DB::table('forest_reports')
+            ->leftJoin('patrol_sessions', 'patrol_sessions.id', '=', 'forest_reports.patrol_id')
+            ->leftJoin('users', 'forest_reports.user_id', '=', 'users.id')
+            ->where('forest_reports.company_id', $companyId)
+            ->whereIn('forest_reports.user_id', $accessibleUserIds);
 
         $this->applyCanonicalFilters(
             $base,
-            'patrol_logs.created_at',
-            'patrol_sessions.site_id',
-            'patrol_sessions.user_id',
+            'forest_reports.created_at',
+            null,
+            'forest_reports.user_id',
             false,
             false,
             true,
@@ -713,20 +680,40 @@ class ExecutiveAnalyticsController extends Controller
         );
 
         // 1. Status Distribution
-        // Return raw flags so view can map them (View expects 5=>Critical etc)
-        // Treat NULL status as 0 (Pending Supervisor)
         $statusDistribution = (clone $base)
-            ->selectRaw('COALESCE(incidence_details.statusFlag, 0) as statusFlag, COUNT(*) as count')
+            ->selectRaw('
+                CASE 
+                    WHEN forest_reports.status = "Resolved" THEN 1
+                    WHEN forest_reports.status = "Ignored" THEN 2
+                    WHEN forest_reports.status = "Escalated" THEN 3
+                    WHEN forest_reports.status = "Critical" THEN 5
+                    WHEN forest_reports.status = "Reverted" THEN 6
+                    ELSE 0 
+                END as statusFlag, 
+                COUNT(*) as count
+            ')
             ->groupBy('statusFlag')
             ->get()
             ->pluck('count', 'statusFlag');
 
-        // 2. Incident Types
+        // 2. Incident Types - Standardized to new categories
+        $typeCase = '
+            CASE 
+                WHEN forest_reports.report_type = "sighting" THEN "Animal Sighting"
+                WHEN forest_reports.report_type = "water_status" THEN "Water Source"
+                WHEN forest_reports.report_type = "fire" THEN "Fire"
+                WHEN forest_reports.report_type IN ("bird_sighting", "bird") THEN "Birds"
+                WHEN forest_reports.report_type IN ("butterfly_sighting", "insect_sighting", "insect_butterfly") THEN "Insect/Butterfly"
+            END';
+
         $incidentTypes = (clone $base)
-            ->selectRaw('patrol_logs.type, COUNT(*) as count')
-            ->groupBy('patrol_logs.type')
+            ->whereIn('forest_reports.report_type', [
+                'sighting', 'water_status', 'fire', 'bird_sighting', 'bird', 
+                'butterfly_sighting', 'insect_sighting', 'insect_butterfly'
+            ])
+            ->selectRaw($typeCase . ' as type, COUNT(*) as count')
+            ->groupBy(DB::raw($typeCase))
             ->orderByDesc('count')
-            ->limit(10)
             ->get();
 
         // 2b. Priority Distribution
@@ -735,36 +722,39 @@ class ExecutiveAnalyticsController extends Controller
         // 3. Resolution Time (Days)
         $resolutionTime = collect();
 
-        // 4. Recent Incidents (Matching Pending statuses)
+        // 4. Recent Incidents
         $criticalIncidents = (clone $base)
-            ->leftJoin('site_details', 'site_details.id', '=', 'patrol_sessions.site_id')
-            ->where(function ($q) {
-                $q->whereIn('incidence_details.statusFlag', [0, 3, 4, 5, 6])
-                    ->orWhereNull('incidence_details.statusFlag');
-            })
             ->select(
-                'patrol_logs.id',
-                'patrol_logs.type',
-                'site_details.name as site_name',
+                'forest_reports.id',
+                'forest_reports.report_type as type',
+                'forest_reports.range as site_name',
                 'users.name as guard_name',
-                'patrol_sessions.user_id as guard_id',
-                'patrol_logs.created_at as dateFormat',
-                DB::raw('COALESCE(incidence_details.statusFlag, 0) as statusFlag')
+                'forest_reports.user_id as guard_id',
+                'forest_reports.created_at as dateFormat',
+                DB::raw('
+                    CASE 
+                        WHEN forest_reports.status = "Resolved" THEN 1
+                        WHEN forest_reports.status = "Ignored" THEN 2
+                        WHEN forest_reports.status = "Escalated" THEN 3
+                        WHEN forest_reports.status = "Critical" THEN 5
+                        WHEN forest_reports.status = "Reverted" THEN 6
+                        ELSE 0 
+                    END as statusFlag
+                ')
             )
-            ->orderByDesc('patrol_logs.created_at')
+            ->orderByDesc('forest_reports.created_at')
             ->limit(10)
             ->get();
 
-        // 5. Per-Site Resolution Table
+        // 5. Per-Range Resolution Table (forest_reports uses range/beat strings)
         $incidentsBySite = (clone $base)
-            ->leftJoin('site_details', 'site_details.id', '=', 'patrol_sessions.site_id')
             ->selectRaw('
-                site_details.name as site_name,
+                forest_reports.range as site_name,
                 COUNT(*) as incident_count,
-                SUM(CASE WHEN incidence_details.statusFlag = 1 THEN 1 ELSE 0 END) as resolved_count,
-                SUM(CASE WHEN (incidence_details.statusFlag IN (0, 3, 4, 5, 6) OR incidence_details.statusFlag IS NULL) THEN 1 ELSE 0 END) as pending_count
+                SUM(CASE WHEN forest_reports.status = "Resolved" THEN 1 ELSE 0 END) as resolved_count,
+                SUM(CASE WHEN forest_reports.status != "Resolved" OR forest_reports.status IS NULL THEN 1 ELSE 0 END) as pending_count
             ')
-            ->groupBy('site_details.id', 'site_details.name')
+            ->groupBy('forest_reports.range')
             ->orderByDesc('incident_count')
             ->limit(10)
             ->get()
