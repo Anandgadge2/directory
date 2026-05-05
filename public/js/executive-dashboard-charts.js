@@ -97,26 +97,6 @@ window.initializeCharts = function () {
                 responsive: true,
                 maintainAspectRatio: false,
                 cutout: "65%",
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const index = elements[0].index;
-                        const label = norm.labels[index];
-                        // Map labels back to status handles if possible, or just pass labels
-                        // The controller handles status searching
-                        if (typeof window.showIncidentsByType === "function") {
-                            window.showIncidentsByType(
-                                label,
-                                `Status: ${label}`,
-                                { fetchByStatus: "true" },
-                            );
-                        }
-                    }
-                },
-                onHover: (event, elements) => {
-                    event.native.target.style.cursor = elements.length
-                        ? "pointer"
-                        : "default";
-                },
                 plugins: {
                     legend: {
                         display: !norm.isEmpty,

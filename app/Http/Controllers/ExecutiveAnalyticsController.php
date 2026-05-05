@@ -700,17 +700,20 @@ class ExecutiveAnalyticsController extends Controller
         $typeCase = '
             CASE 
                 WHEN forest_reports.report_type = "sighting" THEN "Animal Sighting"
-                WHEN forest_reports.report_type = "water_status" THEN "Water Source"
-                WHEN forest_reports.report_type = "fire" THEN "Fire"
+                WHEN forest_reports.report_type IN ("water_status", "Water Source Status") THEN "Water Source"
+                WHEN forest_reports.report_type IN ("fire", "Fire Alerts") THEN "Fire"
                 WHEN forest_reports.report_type IN ("bird_sighting", "bird") THEN "Birds"
                 WHEN forest_reports.report_type IN ("butterfly_sighting", "insect_sighting", "insect_butterfly") THEN "Insect/Butterfly"
+                WHEN forest_reports.report_type IN ("felling", "illegal_felling", "felling_kqzb", "Illegal Felling") THEN "Illegal Felling"
+                WHEN forest_reports.report_type IN ("poaching", "Wild Animal Poaching") THEN "Poaching"
+                WHEN forest_reports.report_type IN ("mining", "Illegal Mining") THEN "Illegal Mining"
+                WHEN forest_reports.report_type IN ("encroachment") THEN "Encroachment"
+                WHEN forest_reports.report_type IN ("storage", "transport", "illegal_timber_storage", "Illegal Timber Storage", "Illegal Timber Transport") THEN "Timber/Storage"
+                ELSE "Other"
             END';
 
         $incidentTypes = (clone $base)
-            ->whereIn('forest_reports.report_type', [
-                'sighting', 'water_status', 'fire', 'bird_sighting', 'bird', 
-                'butterfly_sighting', 'insect_sighting', 'insect_butterfly'
-            ])
+            ->whereNotIn('forest_reports.report_type', ['demo'])
             ->selectRaw($typeCase . ' as type, COUNT(*) as count')
             ->groupBy(DB::raw($typeCase))
             ->orderByDesc('count')
@@ -731,6 +734,8 @@ class ExecutiveAnalyticsController extends Controller
                 'users.name as guard_name',
                 'forest_reports.user_id as guard_id',
                 'forest_reports.created_at as dateFormat',
+                'forest_reports.photo',
+                'forest_reports.report_data',
                 DB::raw('
                     CASE 
                         WHEN forest_reports.status = "Resolved" THEN 1
@@ -744,7 +749,16 @@ class ExecutiveAnalyticsController extends Controller
             )
             ->orderByDesc('forest_reports.created_at')
             ->limit(10)
-            ->get();
+            ->get()
+            ->map(function ($incident) {
+                if (empty($incident->photo) && !empty($incident->report_data)) {
+                    $payload = json_decode($incident->report_data, true);
+                    if (is_array($payload)) {
+                        $incident->photo = $payload['photo_evidence'] ?? ($payload['photo'] ?? null);
+                    }
+                }
+                return $incident;
+            });
 
         // 5. Per-Range Resolution Table (forest_reports uses range/beat strings)
         $incidentsBySite = (clone $base)

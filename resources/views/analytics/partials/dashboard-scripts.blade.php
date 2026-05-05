@@ -134,6 +134,16 @@ window.showIncidentsByType = async function(key, label, extraParams = {}) {
     if (!modal) modal = new bootstrap.Modal(modalEl);
     modal.show();
 
+    // Hide other potentially open modals to prevent stacking/backdrop issues
+    const parentModals = ['totalIncidentsModal', 'resolutionRateModal'];
+    parentModals.forEach(mid => {
+        const mEl = document.getElementById(mid);
+        if (mEl) {
+            const mInst = bootstrap.Modal.getInstance(mEl);
+            if (mInst) mInst.hide();
+        }
+    });
+
     try {
         const globalFilters = (typeof window.getCurrentFilters === 'function') ? window.getCurrentFilters() : '';
         const baseUrl = "{{ route('incidents.by-type', ['type' => ':type']) }}".replace(':type', encodeURIComponent(cleanKey)).replace(/\/$/, ""); 
@@ -153,7 +163,7 @@ window.showIncidentsByType = async function(key, label, extraParams = {}) {
         }
 
         body.innerHTML = data.incidents.map((inc, index) => `
-            <tr onclick="window.openIncidentDetail ? openIncidentDetail(${inc.id}) : null" style="cursor:pointer" class="hover-bg-info-subtle">
+            <tr onclick="window.openIncidentDetail(${inc.id})" style="cursor:pointer" class="hover-bg-info-subtle">
                 <td class="ps-3 text-muted small">${index + 1}</td>
                 <td><span class="badge bg-light text-dark border border-secondary-subtle x-small">${(inc.type || '').replace(/_/g, ' ').toUpperCase()}</span></td>
                 <td><div class="fw-bold text-dark small">${inc.guard || 'N/A'}</div></td>
@@ -175,9 +185,15 @@ window.showIncidentsByType = async function(key, label, extraParams = {}) {
 };
 
 window.openIncidentDetail = async function(id) {
-    const listModalEl = document.getElementById('incidentTypeModal');
-    const existingListModal = bootstrap.Modal.getInstance(listModalEl);
-    if (existingListModal) existingListModal.hide();
+    // Hide all possible parent modals to prevent backdrop stacking
+    const parentModals = ['incidentTypeModal', 'totalIncidentsModal', 'resolutionRateModal'];
+    parentModals.forEach(mid => {
+        const mEl = document.getElementById(mid);
+        if (mEl) {
+            const mInst = bootstrap.Modal.getInstance(mEl);
+            if (mInst) mInst.hide();
+        }
+    });
     
     const detailModalEl = document.getElementById('incidentDetailModal');
     const detailModal = new bootstrap.Modal(detailModalEl);
@@ -253,7 +269,7 @@ window.openIncidentDetail = async function(id) {
                     </div>
                 </div>
                 <div class="p-4">
-                    <img src="${inc.photo ? ((inc.photo.startsWith('data:') || inc.photo.startsWith('http')) ? inc.photo : '/storage/'+inc.photo) : 'https://placehold.co/600x400?text=No+Evidence'}" class="img-fluid rounded border mb-3">
+                    <img src="${inc.photo ? ((inc.photo.startsWith('data:') || inc.photo.startsWith('http')) ? inc.photo : '/storage/'+inc.photo) : 'https://placehold.co/600x400?text=No+Evidence'}" class="img-fluid rounded border mb-3" onerror="this.src='https://placehold.co/600x400?text=Error+Loading+Evidence'">
                     <p class="mb-0 text-dark">${inc.notes || 'No notes.'}</p>
                 </div>
             </div>
@@ -430,7 +446,7 @@ window.initKpiListeners = function() {
                     if (recentTable) {
                         if (recent.length > 0) {
                             recentTable.innerHTML = recent.map(inc => `
-                                <tr onclick="openIncidentDetail('${inc.id}')" style="cursor:pointer" class="hover-bg-danger-subtle">
+                                <tr onclick="window.openIncidentDetail('${inc.id}')" style="cursor:pointer" class="hover-bg-danger-subtle">
                                     <td class="ps-3"><div class="small fw-bold text-dark">${new Date(inc.dateFormat).toLocaleDateString()}<br><span class="extra-small text-muted">${new Date(inc.dateFormat).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div></td>
                                     <td><span class="badge bg-light-subtle text-danger border border-danger-subtle extra-small text-uppercase">${(inc.type || '').replace(/_/g, ' ')}</span></td>
                                     <td class="d-none d-md-table-cell"><div class="small text-dark fw-bold">${inc.site_name || 'N/A'}</div></td>
@@ -453,7 +469,7 @@ window.initKpiListeners = function() {
                             siteTable.innerHTML = sites.map(site => {
                                 const rate = site.total > 0 ? ((site.resolved / site.total) * 100).toFixed(0) : 0;
                                 return `
-                                    <tr>
+                                    <tr onclick="window.showIncidentsByType('${site.site_name.replace(/'/g, "\\'")}', 'Incidents at ${site.site_name.replace(/'/g, "\\'")}', { fetchBySite: 'true' })" style="cursor:pointer" class="hover-bg-info-subtle">
                                         <td class="ps-3 py-3"><div class="fw-bold text-dark small">${site.site_name}</div></td>
                                         <td class="text-center"><span class="badge bg-light text-dark border extra-small px-3">${site.total}</span></td>
                                         <td class="text-center"><span class="badge bg-success-subtle text-success extra-small px-3">${site.resolved}</span></td>

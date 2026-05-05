@@ -56,17 +56,20 @@ class IncidentController extends Controller
         $typeCase = '
             CASE 
                 WHEN forest_reports.report_type = "sighting" THEN "Animal Sighting"
-                WHEN forest_reports.report_type = "water_status" THEN "Water Source"
-                WHEN forest_reports.report_type = "fire" THEN "Fire"
+                WHEN forest_reports.report_type IN ("water_status", "Water Source Status") THEN "Water Source"
+                WHEN forest_reports.report_type IN ("fire", "Fire Alerts") THEN "Fire"
                 WHEN forest_reports.report_type IN ("bird_sighting", "bird") THEN "Birds"
-                WHEN forest_reports.report_type IN ("butterfly_sighting", "insect_sighting", "insect_butterfly") THEN "Insect/Butterfly"
+                WHEN forest_reports.report_type IN ("butterfly_sighting", "insect_sighting", "insect_butterfly", "insect_butterfly") THEN "Insect/Butterfly"
+                WHEN forest_reports.report_type IN ("felling", "illegal_felling", "felling_kqzb", "Illegal Felling") THEN "Illegal Felling"
+                WHEN forest_reports.report_type IN ("poaching", "Wild Animal Poaching") THEN "Poaching"
+                WHEN forest_reports.report_type IN ("mining", "Illegal Mining") THEN "Illegal Mining"
+                WHEN forest_reports.report_type IN ("encroachment") THEN "Encroachment"
+                WHEN forest_reports.report_type IN ("storage", "transport", "illegal_timber_storage", "Illegal Timber Storage", "Illegal Timber Transport") THEN "Timber/Storage"
+                ELSE "Other"
             END';
 
         $typeStats = (clone $base)
-            ->whereIn('forest_reports.report_type', [
-                'sighting', 'water_status', 'fire', 'bird_sighting', 'bird', 
-                'butterfly_sighting', 'insect_sighting', 'insect_butterfly'
-            ])
+            ->whereNotIn('forest_reports.report_type', ['demo'])
             ->selectRaw($typeCase . ' as type, COUNT(*) as total')
             ->groupBy(DB::raw($typeCase))
             ->get();
@@ -402,6 +405,10 @@ class IncidentController extends Controller
                 } else {
                     $query->where('forest_reports.report_type', 'like', $mappedType . '%');
                 }
+            }
+
+            if ($request->has('fetchBySite')) {
+                $query->where('forest_reports.range', 'like', $type . '%');
             }
 
             $this->applyCanonicalFilters($query, 'forest_reports.created_at', null, 'forest_reports.user_id');

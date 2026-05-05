@@ -75,7 +75,7 @@
 
 @push('modals')
 {{-- ================= INCIDENT DETAILS MODAL (Premium Style) ================= --}}
-<div class="modal fade" id="incidentModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="incidentDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 650px;">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
             <div class="modal-header bg-primary text-white py-3" style="border-radius: 16px 16px 0 0;">
@@ -86,7 +86,7 @@
                 <div class="spinner-border text-primary" role="status"></div>
                 <p class="mt-2 text-muted">Fetching details...</p>
             </div>
-            <div id="incidentDetails" class="modal-body bg-light-subtle p-0">
+            <div id="incidentDetailContent" class="modal-body bg-light-subtle p-0">
                 <!-- Dynamic Content -->
             </div>
         </div>
@@ -94,11 +94,11 @@
 </div>
 
 {{-- ================= TYPE MODAL (Premium Style) ================= --}}
-<div class="modal fade" id="typeModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 600px;">
+<div class="modal fade" id="incidentTypeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 800px;">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-info text-white py-3">
-                <h5 class="modal-title fw-bold m-0" id="typeModalTitle">📌 Incidents List</h5>
+                <h5 class="modal-title fw-bold m-0" id="incidentTypeModalTitle">📌 Incidents List</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0">
@@ -112,7 +112,7 @@
                             <th class="text-end pe-3">Date</th>
                         </tr>
                     </thead>
-                    <tbody id="typeListBody">
+                    <tbody id="incidentTypeListBody">
                         <!-- Dynamic -->
                     </tbody>
                 </table>
@@ -142,13 +142,13 @@ document.addEventListener('click', function(e) {
 });
 
 /* ================= MODAL JS ================= */
-async function openIncidentDetail(id) {
-    const modalEl = document.getElementById('incidentModal');
-    const detailsContainer = document.getElementById('incidentDetails');
+window.openIncidentDetail = async function(id) {
+    const modalEl = document.getElementById('incidentDetailModal');
+    const detailsContainer = document.getElementById('incidentDetailContent');
     const loading = document.getElementById('modalLoading');
     
     // Close type modal if open to prevent stacking issues
-    const typeModalEl = document.getElementById('typeModal');
+    const typeModalEl = document.getElementById('incidentTypeModal');
     const typeModalInstance = bootstrap.Modal.getInstance(typeModalEl);
     if(typeModalInstance) typeModalInstance.hide();
 
@@ -275,10 +275,10 @@ async function openIncidentDetail(id) {
     }
 }
 
-async function showIncidentsByType(key, label, extraParams = {}) {
-    const modalEl = document.getElementById('typeModal');
-    const title = document.getElementById('typeModalTitle');
-    const body = document.getElementById('typeListBody');
+window.showIncidentsByType = async function(key, label, extraParams = {}) {
+    const modalEl = document.getElementById('incidentTypeModal');
+    const title = document.getElementById('incidentTypeModalTitle');
+    const body = document.getElementById('incidentTypeListBody');
     
     title.innerText = label;
     body.innerHTML = '<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Loading...</td></tr>';
@@ -301,7 +301,7 @@ async function showIncidentsByType(key, label, extraParams = {}) {
         }
 
         body.innerHTML = data.incidents.map((inc, index) => `
-            <tr onclick="openIncidentDetail(${inc.id})" style="cursor:pointer">
+            <tr onclick="window.openIncidentDetail(${inc.id})" style="cursor:pointer">
                 <td class="ps-3 text-muted small">${index + 1}</td>
                 <td><span class="badge bg-light text-dark border">${inc.type.replace(/_/g, ' ')}</span></td>
                 <td class="text-start ps-3"><small>${inc.guard || '—'}</small></td>
@@ -315,13 +315,13 @@ async function showIncidentsByType(key, label, extraParams = {}) {
 }
 
 function closeIncident() {
-    const modalEl = document.getElementById('incidentModal');
+    const modalEl = document.getElementById('incidentDetailModal');
     const modal = bootstrap.Modal.getInstance(modalEl);
     if(modal) modal.hide();
 }
 
 function closeTypeModal() {
-    const modalEl = document.getElementById('typeModal');
+    const modalEl = document.getElementById('incidentTypeModal');
     const modal = bootstrap.Modal.getInstance(modalEl);
     if(modal) modal.hide();
 }
@@ -364,8 +364,20 @@ document.addEventListener('DOMContentLoaded', () => {
             labels: typeLabelsReadable.length > 0 ? typeLabelsReadable : ['No data'],
             datasets: [{
                 data: typeData.length > 0 ? typeData : [0],
-                backgroundColor: typeData.length > 0 ? ['#2e7d32','#1e88e5','#f9a825','#c62828','#555'] : ['#f8f9fa'],
-                borderWidth:0
+                backgroundColor: typeData.length > 0 ? [
+                    '#2e7d32', // Animal Sighting (Green)
+                    '#0288d1', // Water Source (Blue)
+                    '#d32f2f', // Fire (Red)
+                    '#1976d2', // Birds (Primary)
+                    '#ffa000', // Insect/Butterfly (Amber)
+                    '#7b1fa2', // Illegal Felling (Purple)
+                    '#c2185b', // Poaching (Pink)
+                    '#e64a19', // Illegal Mining (Deep Orange)
+                    '#5d4037', // Encroachment (Brown)
+                    '#455a64', // Timber/Storage (Blue Gray)
+                    '#616161'  // Other (Gray)
+                ] : ['#f8f9fa'],
+                borderWidth: 0
             }]
         },
         options:{ 
